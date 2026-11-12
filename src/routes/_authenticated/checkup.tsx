@@ -62,7 +62,17 @@ function CheckupPage() {
         leads.push(...(data ?? []));
         if ((data ?? []).length < 1000) break;
       }
-      const items: Record<string, { name: string; qty: number; price: number; currency: string; discount: number; is_package: boolean }[]> = {};
+      const items: Record<
+        string,
+        {
+          name: string;
+          qty: number;
+          price: number;
+          currency: string;
+          discount: number;
+          is_package: boolean;
+        }[]
+      > = {};
       const ids = leads.map((l) => l.id);
       for (let i = 0; i < ids.length; i += 200) {
         const { data } = await supabase
@@ -78,10 +88,7 @@ function CheckupPage() {
   });
 
   const leads = data?.leads ?? [];
-  const stats = useMemo(
-    () => (data ? checkupStats(leads, data.revenue) : null),
-    [data, leads],
-  );
+  const stats = useMemo(() => (data ? checkupStats(leads, data.revenue) : null), [data, leads]);
   const steps = useMemo(() => checkupFunnelSteps(leads), [leads]);
   const dayLeads = leads.filter((l) => l.lead_date === date);
   const dayStats = useMemo(
@@ -168,9 +175,7 @@ function CheckupPage() {
 
           {kind === "day" && dayStats && (
             <section className="rounded-xl border bg-card p-4">
-              <h2 className="mb-2 font-display text-lg font-bold">
-                Отчёт за {fmtDate(date)}
-              </h2>
+              <h2 className="mb-2 font-display text-lg font-bold">Отчёт за {fmtDate(date)}</h2>
               <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm md:grid-cols-3">
                 <div>
                   Лидов — <b>{dayStats.leads}</b>

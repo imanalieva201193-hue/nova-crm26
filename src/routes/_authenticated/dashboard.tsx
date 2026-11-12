@@ -10,6 +10,7 @@ import {
   bishkekDate,
   dashStats,
   funnelSteps,
+  openTasks,
   type FunnelCode,
 } from "@/lib/crm";
 import { Input } from "@/components/ui/input";
@@ -20,12 +21,12 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
       { title: "Главная — Nova CRM" },
       {
         name: "description",
-        content: "Общая статистика за период: лиды, записи, посещения, операции и конверсии.",
+        content: "Панель руководителя за период: лиды, записи, посещения, операции и конверсии.",
       },
       { property: "og:title", content: "Главная — Nova CRM" },
       {
         property: "og:description",
-        content: "Общая статистика за период: лиды, записи, посещения, операции и конверсии.",
+        content: "Панель руководителя за период: лиды, записи, посещения, операции и конверсии.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -44,7 +45,7 @@ const PRESETS: [Preset, string][] = [
 ];
 
 function DashboardPage() {
-  const { branch } = useCrm();
+  const { branch, openLead } = useCrm();
   const today = bishkekDate();
   const [preset, setPreset] = useState<Preset>("month");
   const [custom, setCustom] = useState({ from: today.slice(0, 8) + "01", to: today });
@@ -111,16 +112,39 @@ function DashboardPage() {
       .sort((a, b) => b.s.leads - a.s.leads);
   }, [filtered]);
 
-  const nameOf = (email: string) =>
-    employees.find((e) => e.email === email)?.full_name || email;
+  const openQ = useQuery({
+    queryKey: ["open-tasks", branch],
+    queryFn: async () => {
+      let q = supabase.from("leads").select("*").is("outcome", null).neq("stage", 10).limit(2000);
+      if (branch !== "all") q = q.eq("branch_code", branch);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const overdue = useMemo(() => {
+    const m = new Map<string, { l: Lead; tasks: string[] }[]>();
+    for (const l of openQ.data ?? []) {
+      if (employee && l.responsible_email !== employee) continue;
+      const tasks = openTasks(l, today);
+      if (!tasks.length) continue;
+      const k = l.responsible_email || "Без ответственного";
+      m.set(k, [...(m.get(k) ?? []), { l, tasks }]);
+    }
+    return [...m.entries()]
+      .map(([email, items]) => ({ email, items }))
+      .sort((a, b) => b.items.length - a.items.length);
+  }, [openQ.data, employee, today]);
+
+  const nameOf = (email: string) => employees.find((e) => e.email === email)?.full_name || email;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <div className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
-          Общая статистика
+          Панель руководителя
         </div>
-        <h1 className="font-display text-4xl font-bold">Главная</h1>
+        <h1 className="font-display text-4xl font-bold">NOVA CRM</h1>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -181,49 +205,104 @@ function DashboardPage() {
         <p className="text-muted-foreground">Считаю…</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-            <Kpi label="Новых лидов" value={stats.leads} hint={`мусорных ${stats.trash}`} />
-            <Kpi label="Записались на консультацию" value={stats.bookedConsult} />
-            <Kpi label="Пришли на консультацию" value={stats.cameConsult} />
-            <Kpi label="Не пришли" value={stats.noShow} />
-            <Kpi label="Записались на операцию" value={stats.bookedOp} />
-            <Kpi label="Проведено операций" value={stats.doneOp} />
-            <Kpi label="Отказы" value={stats.refusals} />
-            <Kpi label="Конв. лид → консультация" value={`${stats.convLeadConsult}%`} />
-            <Kpi label="Конв. консультация → операция" value={`${stats.convConsultOp}%`} />
+          <div className="grid grid-cols-2 gap-x-6 gap-y-8 border-b pb-8 md:grid-cols-3">
+            <Big label="Лидов" value={stats.leads} />
+            <Big label="Записались" value={stats.bookedConsult} />
+            <Big label="Пришли" value={stats.cameConsult} />
+            <Big label="Записаны на операцию" value={stats.bookedOp} />
+            <Big label="Операций проведено" value={stats.doneOp} />
+            <Big label="Не пришли" value={stats.noShow} />
+            <Big label="Отказы" value={stats.refusals} />
           </div>
 
-          <section className="rounded-xl border bg-card p-4">
-            <h2 className="mb-3 font-display text-lg font-bold">Воронка продаж</h2>
-            <div className="flex flex-col gap-2 md:flex-row md:items-stretch">
-              {steps.map((s, i) => (
-                <div key={s.key} className="flex items-center gap-2 md:flex-1">
-                  <div className="flex-1 rounded-xl bg-muted p-3 text-center">
-                    <div className="font-display text-2xl font-bold">{s.count}</div>
-                    <div className="text-xs text-muted-foreground">{s.label}</div>
-                  </div>
-                  {i < steps.length - 1 && (
-                    <div className="shrink-0 text-xs font-semibold text-primary md:-mx-1">
-                      {steps[i + 1]?.conv}% →
-                    </div>
-                  )}
+          <section className="space-y-4 border-b pb-8">
+            <h2 className="font-display text-xl font-bold">Воронка пациентов</h2>
+            {steps.map((s) => (
+              <div key={s.key}>
+                <div className="mb-2 flex justify-between">
+                  <span>{s.label}</span>
+                  <span className="font-semibold">{s.count}</span>
                 </div>
-              ))}
+                <div className="h-3 rounded-full bg-muted">
+                  <div
+                    className="h-3 rounded-full bg-primary/70"
+                    style={{ width: `${steps[0]?.count ? (s.count / steps[0].count) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </section>
+
+          <section className="space-y-4 border-b pb-8">
+            <h2 className="font-display text-xl font-bold">Конверсия</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border p-5">
+                <div className="font-display text-3xl font-bold">{stats.convLeadConsult}%</div>
+                <div className="text-sm text-muted-foreground">Из лида в запись</div>
+              </div>
+              <div className="rounded-2xl border p-5">
+                <div className="font-display text-3xl font-bold">{stats.convConsultOp}%</div>
+                <div className="text-sm text-muted-foreground">
+                  Из консультации в запись на операцию
+                </div>
+              </div>
             </div>
           </section>
 
-          <section className="overflow-x-auto rounded-xl border bg-card p-4">
+          <section className="space-y-3 border-b pb-8">
+            <h2 className="font-display text-xl font-bold">Не выполнено сотрудниками</h2>
+            {!overdue.length ? (
+              <p className="text-sm text-muted-foreground">Все задачи закрыты</p>
+            ) : (
+              <div className="divide-y rounded-2xl border border-destructive/40">
+                {overdue.map((o) => (
+                  <div key={o.email} className="p-4">
+                    <div className="mb-2 flex justify-between font-medium">
+                      <span>{nameOf(o.email)}</span>
+                      <span className="font-bold text-destructive">{o.items.length}</span>
+                    </div>
+                    <ul className="space-y-1 text-sm">
+                      {o.items.slice(0, 5).map((it) => (
+                        <li key={it.l.id}>
+                          <button
+                            className="text-left text-destructive hover:underline"
+                            onClick={() => openLead(it.l.id)}
+                          >
+                            {it.l.patient_name || it.l.phone} — {it.tasks.join("; ")}
+                          </button>
+                        </li>
+                      ))}
+                      {o.items.length > 5 && (
+                        <li className="text-xs text-muted-foreground">
+                          и ещё {o.items.length - 5}
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="overflow-x-auto">
             <h2 className="mb-2 font-display text-lg font-bold">Результат каждого сотрудника</h2>
             <table className="w-full text-sm">
               <thead className="text-xs text-muted-foreground">
                 <tr>
-                  {["Сотрудник", "Лиды", "Записи", "Пришли", "На операцию", "Операции", "Отказы", "Конв. лид→конс."].map(
-                    (h, i) => (
-                      <th key={h} className={`py-1 font-normal ${i ? "text-right" : "text-left"}`}>
-                        {h}
-                      </th>
-                    ),
-                  )}
+                  {[
+                    "Сотрудник",
+                    "Лиды",
+                    "Записи",
+                    "Пришли",
+                    "На операцию",
+                    "Операции",
+                    "Отказы",
+                    "Конв. лид→конс.",
+                  ].map((h, i) => (
+                    <th key={h} className={`py-1 font-normal ${i ? "text-right" : "text-left"}`}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -255,12 +334,11 @@ function DashboardPage() {
   );
 }
 
-function Kpi({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
+function Big({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="font-display text-2xl font-bold">{value}</div>
-      {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
+    <div>
+      <div className="font-display text-4xl font-bold">{value}</div>
+      <div className="text-sm text-muted-foreground">{label}</div>
     </div>
   );
 }

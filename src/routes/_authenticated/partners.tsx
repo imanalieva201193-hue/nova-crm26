@@ -41,16 +41,14 @@ function PartnersPage() {
       toast.error("Укажите имя");
       return;
     }
-    const { error } = await supabase
-      .from("partners")
-      .insert({
-        name: n.name,
-        type: n.type,
-        specialty: n.specialty,
-        clinic: n.clinic,
-        city: n.city,
-        bonus_per_operation: Number(n.bonus || 0),
-      });
+    const { error } = await supabase.from("partners").insert({
+      name: n.name,
+      type: n.type,
+      specialty: n.specialty,
+      clinic: n.clinic,
+      city: n.city,
+      bonus_per_operation: Number(n.bonus || 0),
+    });
     if (error) {
       toast.error(error.message);
       return;

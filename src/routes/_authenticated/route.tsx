@@ -23,6 +23,8 @@ import {
   Handshake,
   Settings,
   BarChart3,
+  UserCheck,
+  SlidersHorizontal,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -40,7 +42,9 @@ const NAV = [
   { to: "/surgery", label: "Хирургия", icon: Stethoscope },
   { to: "/checkup", label: "Чекап — 2 этаж", icon: ClipboardCheck },
   { to: "/partners", label: "Агенты", icon: Handshake },
+  { to: "/admins", label: "Админы", icon: UserCheck },
   { to: "/reports", label: "Отчёты", icon: BarChart3 },
+  { to: "/settings", label: "Настройки", icon: SlidersHorizontal },
 ] as const;
 
 function Shell() {

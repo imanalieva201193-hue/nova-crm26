@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAdminsRouteImport } from './routes/_authenticated/admins'
 import { Route as AuthenticatedCheckupRouteImport } from './routes/_authenticated/checkup'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedFunnelRouteImport } from './routes/_authenticated/funnel'
@@ -20,6 +21,7 @@ import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPartnersRouteImport } from './routes/_authenticated/partners'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSurgeryRouteImport } from './routes/_authenticated/surgery'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 
@@ -40,6 +42,11 @@ const AuthRoute = AuthRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminsRoute = AuthenticatedAdminsRouteImport.update({
+  id: '/admins',
+  path: '/admins',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCheckupRoute = AuthenticatedCheckupRouteImport.update({
@@ -77,6 +84,11 @@ const AuthenticatedSalesRoute = AuthenticatedSalesRouteImport.update({
   path: '/sales',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSurgeryRoute = AuthenticatedSurgeryRouteImport.update({
   id: '/surgery',
   path: '/surgery',
@@ -92,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admins': typeof AuthenticatedAdminsRoute
   '/checkup': typeof AuthenticatedCheckupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/funnel': typeof AuthenticatedFunnelRoute
@@ -99,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/partners': typeof AuthenticatedPartnersRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/sales': typeof AuthenticatedSalesRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/surgery': typeof AuthenticatedSurgeryRoute
   '/tasks': typeof AuthenticatedTasksRoute
 }
@@ -106,6 +120,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/admins': typeof AuthenticatedAdminsRoute
   '/checkup': typeof AuthenticatedCheckupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/funnel': typeof AuthenticatedFunnelRoute
@@ -113,6 +128,7 @@ export interface FileRoutesByTo {
   '/partners': typeof AuthenticatedPartnersRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/sales': typeof AuthenticatedSalesRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/surgery': typeof AuthenticatedSurgeryRoute
   '/tasks': typeof AuthenticatedTasksRoute
 }
@@ -122,6 +138,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admins': typeof AuthenticatedAdminsRoute
   '/_authenticated/checkup': typeof AuthenticatedCheckupRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/funnel': typeof AuthenticatedFunnelRoute
@@ -129,6 +146,7 @@ export interface FileRoutesById {
   '/_authenticated/partners': typeof AuthenticatedPartnersRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/surgery': typeof AuthenticatedSurgeryRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
 }
@@ -138,6 +156,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/admin'
+    | '/admins'
     | '/checkup'
     | '/dashboard'
     | '/funnel'
@@ -145,6 +164,7 @@ export interface FileRouteTypes {
     | '/partners'
     | '/reports'
     | '/sales'
+    | '/settings'
     | '/surgery'
     | '/tasks'
   fileRoutesByTo: FileRoutesByTo
@@ -152,6 +172,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/admin'
+    | '/admins'
     | '/checkup'
     | '/dashboard'
     | '/funnel'
@@ -159,6 +180,7 @@ export interface FileRouteTypes {
     | '/partners'
     | '/reports'
     | '/sales'
+    | '/settings'
     | '/surgery'
     | '/tasks'
   id:
@@ -167,6 +189,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/admin'
+    | '/_authenticated/admins'
     | '/_authenticated/checkup'
     | '/_authenticated/dashboard'
     | '/_authenticated/funnel'
@@ -174,6 +197,7 @@ export interface FileRouteTypes {
     | '/_authenticated/partners'
     | '/_authenticated/reports'
     | '/_authenticated/sales'
+    | '/_authenticated/settings'
     | '/_authenticated/surgery'
     | '/_authenticated/tasks'
   fileRoutesById: FileRoutesById
@@ -212,6 +236,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admins': {
+      id: '/_authenticated/admins'
+      path: '/admins'
+      fullPath: '/admins'
+      preLoaderRoute: typeof AuthenticatedAdminsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/checkup': {
@@ -263,6 +294,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSalesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/surgery': {
       id: '/_authenticated/surgery'
       path: '/surgery'
@@ -282,6 +320,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminsRoute: typeof AuthenticatedAdminsRoute
   AuthenticatedCheckupRoute: typeof AuthenticatedCheckupRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFunnelRoute: typeof AuthenticatedFunnelRoute
@@ -289,12 +328,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPartnersRoute: typeof AuthenticatedPartnersRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSurgeryRoute: typeof AuthenticatedSurgeryRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminsRoute: AuthenticatedAdminsRoute,
   AuthenticatedCheckupRoute: AuthenticatedCheckupRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFunnelRoute: AuthenticatedFunnelRoute,
@@ -302,6 +343,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPartnersRoute: AuthenticatedPartnersRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSurgeryRoute: AuthenticatedSurgeryRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
 }

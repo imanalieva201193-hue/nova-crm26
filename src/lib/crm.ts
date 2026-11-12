@@ -736,3 +736,27 @@ export function contributionReport(leads: Attribution[]): ContributionRow[] {
   }
   return [...m.values()].sort((a, b) => b.operations - a.operations || b.brought - a.brought);
 }
+
+/** Unfinished items an employee must close on a lead (shown red; block stage advance). */
+export type OpenTaskLead = LeadLike & {
+  outcome?: string | null;
+  came?: boolean | null;
+  visit_date?: string | null;
+  operation_date?: string | null;
+  next_touch?: string | null;
+};
+export function openTasks(l: OpenTaskLead, today: string): string[] {
+  if (l.outcome || l.stage === FINAL) return [];
+  const out: string[] = [];
+  const miss = missingForStage(l, l.stage);
+  if (miss.length) out.push("Не заполнено: " + miss.join(", "));
+  if (l.visit_date && l.visit_date.slice(0, 10) < today && !l.came)
+    out.push("Визит прошёл — отметьте явку");
+  if (FUNNELS[l.funnel as FunnelCode]?.surgery && l.operation_date && l.operation_date < today)
+    out.push("Дата операции прошла — отметьте результат");
+  if (l.stage !== REANIMATION) {
+    if (!l.next_touch) out.push("Не назначено следующее касание");
+    else if (l.next_touch < today) out.push("Просрочено касание");
+  }
+  return out;
+}

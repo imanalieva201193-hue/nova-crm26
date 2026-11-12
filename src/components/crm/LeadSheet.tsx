@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+const MissCtx = createContext<string[]>([]);
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesInsert } from "@/integrations/supabase/types";
@@ -25,6 +26,7 @@ import {
   INSTALLMENT_MAX,
   INSTALLMENT_GUARANTOR_FROM,
   bishkekDate,
+  openTasks,
   doctorWorksOn,
   estimateTotals,
   fmtDate,
@@ -56,9 +58,14 @@ function Field({
   children: React.ReactNode;
   req?: boolean;
 }) {
+  const bad = useContext(MissCtx).includes(label.replace(/^(Хирург|Врач)$/, "Врач"));
   return (
-    <div className="space-y-1">
-      <Label className="text-xs text-muted-foreground">
+    <div
+      className={`space-y-1 ${bad ? "rounded-md ring-2 ring-destructive/60 ring-offset-2 ring-offset-card" : ""}`}
+    >
+      <Label
+        className={`text-xs ${bad ? "font-semibold text-destructive" : "text-muted-foreground"}`}
+      >
         {label}
         {req && <span className="text-destructive"> *</span>}
       </Label>
@@ -255,6 +262,13 @@ export function LeadSheet({
       toast.error("Заполните: " + miss.join(", "));
       return;
     }
+    if (!next.outcome && orig && next.stage > orig.stage) {
+      const open = openTasks({ ...orig, ...next, stage: orig.stage }, bishkekDate());
+      if (open.length) {
+        toast.error("Сначала закройте: " + open.join("; "));
+        return;
+      }
+    }
     if (
       next.funnel === "nova_check" &&
       next.stage >= 3 &&
@@ -448,6 +462,20 @@ export function LeadSheet({
   }
 
   const stages = stageList(f.funnel as FunnelCode);
+  const missLive = f.outcome
+    ? []
+    : missingForStage({ ...f, phone: f.phone || phoneRaw }, f.stage).map((m) =>
+        m === "Дата визита"
+          ? "Дата и время визита"
+          : m === "Стоимость"
+            ? "Стоимость, сом"
+            : m === "Предоплата"
+              ? "Предоплата, сом"
+              : m === "Воронка"
+                ? "Воронка"
+                : m,
+      );
+  const openLive = openTasks({ ...f, phone: f.phone || phoneRaw }, bishkekDate());
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full overflow-y-auto bg-background sm:max-w-2xl">
@@ -466,531 +494,551 @@ export function LeadSheet({
             </div>
           )}
         </SheetHeader>
-        <div className="space-y-4 px-4 pb-24">
-          {warnings.map((w) => (
-            <div
-              key={w}
-              className="flex gap-2 rounded-lg bg-warning/25 p-2.5 text-sm text-warning-foreground"
-            >
-              <AlertTriangle className="size-4 shrink-0" />
-              {w}
-            </div>
-          ))}
-
-          <Block title="Пациент и обращение">
-            <Field label="Пациент">
-              <Input
-                value={f.patient_name ?? ""}
-                onChange={(e) => set({ patient_name: e.target.value })}
-              />
-            </Field>
-            <Field label="Телефон" req>
-              <Input
-                value={phoneRaw}
-                onChange={(e) => setPhoneRaw(e.target.value)}
-                onBlur={() => {
-                  const p = normalizePhone(phoneRaw);
-                  if (p) setPhoneRaw(p);
-                }}
-                placeholder="0555 123 456"
-              />
-            </Field>
-            <Field label="Дата заявки" req>
-              <Input
-                type="date"
-                value={f.lead_date ?? ""}
-                onChange={(e) => set({ lead_date: e.target.value })}
-              />
-            </Field>
-            <Field label="Источник" req>
-              <select
-                className={sel}
-                value={f.source ?? ""}
-                onChange={(e) => set({ source: e.target.value })}
-              >
-                <option value="">—</option>
-                {sources.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Линия" req>
-              <select
-                className={sel}
-                value={f.line ?? ""}
-                onChange={(e) => set({ line: e.target.value })}
-              >
-                <option value="">—</option>
-                {LINES.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Канал">
-              <select
-                className={sel}
-                value={f.channel ?? ""}
-                onChange={(e) => set({ channel: e.target.value })}
-              >
-                <option value="">—</option>
-                {CHANNELS.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Филиал" req>
-              <select
-                className={sel}
-                value={f.branch_code}
-                onChange={(e) =>
-                  set({
-                    branch_code: e.target.value,
-                    funnel: BRANCH_FUNNELS[e.target.value]?.[0] ?? "nova_general",
-                    doctor_id: null,
-                  })
-                }
-              >
-                {BRANCHES.map((b) => (
-                  <option key={b.code} value={b.code}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Воронка" req>
-              <select
-                className={sel}
-                value={f.funnel}
-                onChange={(e) => set({ funnel: e.target.value, stage: 1 })}
-              >
-                {(BRANCH_FUNNELS[f.branch_code] ?? []).map((c) => (
-                  <option key={c} value={c}>
-                    {FUNNELS[c].name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Этап">
-              <select
-                className={sel}
-                value={f.stage}
-                onChange={(e) => {
-                  const st = Number(e.target.value);
-                  set({
-                    stage: st,
-                    ...(f.funnel === "nova_check" && st >= 3 && !f.prepayment
-                      ? { prepayment: NOVA_CHECK_PREPAYMENT }
-                      : {}),
-                  });
-                }}
-              >
-                {stages.map((s) => (
-                  <option key={s.n} value={s.n}>
-                    {s.n === FINAL ? "✓ " : s.n === REANIMATION ? "" : s.n + ". "}
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <div className="col-span-full grid grid-cols-2 gap-2 rounded-lg bg-muted/50 p-3 text-xs sm:grid-cols-4">
-              {(
-                [
-                  ["Привёл", f.brought_by_email],
-                  ["Записал", f.booked_by_email],
-                  ["Подтвердил", f.confirmed_by_email],
-                  ["Довёл до операции", f.operation_by_email],
-                ] as const
-              ).map(([l, v]) => (
-                <div key={l}>
-                  <div className="text-muted-foreground">{l}</div>
-                  <div className="truncate font-medium">{v || "—"}</div>
-                </div>
-              ))}
-            </div>
-            <Field label="Ответственный (email)">
-              <Input
-                value={f.responsible_email ?? ""}
-                onChange={(e) => set({ responsible_email: e.target.value })}
-              />
-            </Field>
-            <Field label="Следующее касание">
-              <Input
-                type="date"
-                value={f.next_touch ?? ""}
-                onChange={(e) => set({ next_touch: e.target.value || null })}
-              />
-            </Field>
-            <Field label="Страховая">
-              <select
-                className={sel}
-                value={f.insurance ?? ""}
-                onChange={(e) => set({ insurance: e.target.value || null })}
-              >
-                <option value="">Нет</option>
-                {insurances.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Партнёр (агентская программа)">
-              <select
-                className={sel}
-                value={f.partner_id ?? ""}
-                onChange={(e) => set({ partner_id: e.target.value || null })}
-              >
-                <option value="">Нет</option>
-                {partners.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={!!f.foreigner} onCheckedChange={(v) => set({ foreigner: !!v })} />
-              Иностранный пациент (+10%)
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={!!f.interest} onCheckedChange={(v) => set({ interest: !!v })} />
-              Есть интерес
-            </label>
-            <div className="sm:col-span-2">
-              <Field label="Комментарий">
-                <Textarea
-                  rows={2}
-                  value={f.comment ?? ""}
-                  onChange={(e) => set({ comment: e.target.value })}
-                />
-              </Field>
-            </div>
-          </Block>
-
-          <Block title="Запись и явка">
-            <Field label={funnelDef?.surgery ? "Хирург" : "Врач"}>
-              <select
-                className={sel}
-                value={f.doctor_id ?? ""}
-                onChange={(e) => set({ doctor_id: e.target.value || null })}
-              >
-                <option value="">—</option>
-                {branchDoctors.map((d) => (
-                  <option key={d.id} value={d.id} disabled={d.status === "Декрет"}>
-                    {d.full_name} — {d.specialty}
-                    {d.status === "Декрет" ? " (декрет)" : ""}
-                  </option>
-                ))}
-              </select>
-              {doctor && <p className="text-xs text-muted-foreground">Приём: {doctor.schedule}</p>}
-            </Field>
-            <Field label="Дата и время визита">
-              <Input
-                type="datetime-local"
-                value={f.visit_date ? f.visit_date.slice(0, 16) : ""}
-                onChange={(e) =>
-                  set({ visit_date: e.target.value ? e.target.value + ":00+06:00" : null })
-                }
-              />
-            </Field>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={!!f.confirmed} onCheckedChange={(v) => set({ confirmed: !!v })} />
-              Подтверждено
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={!!f.came}
-                onCheckedChange={(v) => set({ came: !!v, visited_at: v ? bishkekDate() : null })}
-              />
-              Пришёл
-            </label>
-          </Block>
-
-          {f.funnel === "nova_check" ? (
-            <Block title="Nova Check">
-              <Field label="Предоплата, сом">
-                <Input
-                  type="number"
-                  value={f.prepayment ?? ""}
-                  onChange={(e) =>
-                    set({ prepayment: e.target.value ? Number(e.target.value) : null })
-                  }
-                />
-              </Field>
-              <Field label="Дата предоплаты">
-                <Input
-                  type="date"
-                  value={f.prepayment_date ?? ""}
-                  onChange={(e) => set({ prepayment_date: e.target.value || null })}
-                />
-              </Field>
-              <p className="text-xs text-muted-foreground sm:col-span-2">
-                Предоплата {fmtMoney(NOVA_CHECK_PREPAYMENT)} (Элсом / Мбанк). Обследование 3 дня,
-                затем паспорт здоровья; повторный чекап — через год. Не больше{" "}
-                {NOVA_CHECK_DAILY_LIMIT} чекапов в день.
-              </p>
-            </Block>
-          ) : funnelDef?.surgery ? (
-            <Block title="Операция и оплата">
-              <Field label="Дата операции">
-                <Input
-                  type="date"
-                  value={f.operation_date ?? ""}
-                  onChange={(e) => set({ operation_date: e.target.value || null })}
-                />
-              </Field>
-              <Field label="Стоимость, сом">
-                <Input
-                  type="number"
-                  value={f.operation_cost ?? ""}
-                  onChange={(e) =>
-                    set({ operation_cost: e.target.value ? Number(e.target.value) : null })
-                  }
-                />
-              </Field>
-              <Field label="Предоплата, сом">
-                <Input
-                  type="number"
-                  value={f.prepayment ?? ""}
-                  onChange={(e) =>
-                    set({ prepayment: e.target.value ? Number(e.target.value) : null })
-                  }
-                />
-              </Field>
-              <Field label="Дата предоплаты">
-                <Input
-                  type="date"
-                  value={f.prepayment_date ?? ""}
-                  onChange={(e) => set({ prepayment_date: e.target.value || null })}
-                />
-              </Field>
-              <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                <Checkbox
-                  checked={!!f.installment}
-                  onCheckedChange={(v) => set({ installment: !!v })}
-                />
-                Рассрочка (О!Банк)
-              </label>
-              {f.installment && (
-                <p className="rounded-lg bg-secondary p-2.5 text-xs text-secondary-foreground sm:col-span-2">
-                  «Рассрочка О!Банк на 3, 6 или 9 месяцев, до 250 000 сом. Скидки и акции при
-                  рассрочке не действуют. Нужны паспорт и справка с работы за 3–6 месяцев
-                  {totals.kgs > INSTALLMENT_GUARANTOR_FROM ? ", а также поручитель" : ""}.
-                  Оформление на ресепшене Абдумомунова, 2 и 3 этаж.»
-                </p>
-              )}
-            </Block>
-          ) : null}
-
-          <section className="rounded-xl border bg-card p-4">
-            <h3 className="mb-3 text-sm font-semibold text-primary">Услуги и смета</h3>
-            <div className="relative">
-              <Input
-                placeholder="Найти услугу в прайсе филиала…"
-                value={svcSearch}
-                onChange={(e) => setSvcSearch(e.target.value)}
-              />
-              {svcResults.length > 0 && (
-                <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border bg-popover shadow-lg">
-                  {svcResults.map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => addItem(s)}
-                      className="flex w-full justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
-                    >
-                      <span>
-                        {s.name}
-                        <span className="block text-xs text-muted-foreground">
-                          {s.direction}
-                          {s.note ? ` · ${s.note}` : ""}
-                        </span>
-                      </span>
-                      <span className="shrink-0 font-medium">
-                        {s.price_from ? "от " : ""}
-                        {s.price_text || fmtMoney(Number(s.price ?? 0), s.currency)}
-                      </span>
-                    </button>
+        <MissCtx.Provider value={missLive}>
+          <div className="space-y-4 px-4 pb-24">
+            {openLive.length > 0 && (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <div className="mb-1 font-semibold">Не выполнено — следующий этап закрыт</div>
+                <ul className="list-disc pl-5">
+                  {openLive.map((t) => (
+                    <li key={t}>{t}</li>
                   ))}
-                </div>
-              )}
-            </div>
-            <div className="mt-3 divide-y">
-              {items.map((i) => (
-                <div key={i.id} className="flex items-center gap-2 py-2 text-sm">
-                  <div className="flex-1">
-                    {i.name}
-                    {i.is_package && (
-                      <Badge variant="outline" className="ml-2">
-                        пакет
-                      </Badge>
-                    )}
-                  </div>
-                  <Input
-                    type="number"
-                    min={1}
-                    className="h-8 w-14"
-                    value={i.qty}
-                    onChange={(e) => updItem(i.id, { qty: Math.max(1, Number(e.target.value)) })}
-                    aria-label="Количество"
-                  />
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    className="h-8 w-16"
-                    value={i.discount}
-                    disabled={i.is_package}
-                    onChange={(e) => updItem(i.id, { discount: Number(e.target.value) })}
-                    aria-label="Скидка %"
-                    title="Скидка %"
-                  />
-                  <div className="w-28 text-right">
-                    {i.price_from ? "от " : ""}
-                    {fmtMoney(i.price * i.qty, i.currency)}
-                  </div>
-                  <button
-                    onClick={() => delItem(i.id)}
-                    aria-label="Удалить"
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              ))}
-              {!items.length && (
-                <p className="py-2 text-sm text-muted-foreground">Услуги не добавлены</p>
-              )}
-            </div>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
-              <div className="font-semibold">Итого: {totalsText(totals)}</div>
-              {funnelDef?.surgery && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => set({ operation_cost: totals.kgs })}
-                >
-                  Записать в стоимость операции
-                </Button>
-              )}
-            </div>
-          </section>
+                </ul>
+              </div>
+            )}
+            {warnings.map((w) => (
+              <div
+                key={w}
+                className="flex gap-2 rounded-lg bg-warning/25 p-2.5 text-sm text-warning-foreground"
+              >
+                <AlertTriangle className="size-4 shrink-0" />
+                {w}
+              </div>
+            ))}
 
-          {leadId && (
-            <section className="rounded-xl border bg-card p-4">
-              <div className="mb-4 rounded-lg bg-secondary p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5 text-sm font-semibold text-secondary-foreground">
-                    <Sparkles className="size-4" />
-                    Следующий шаг от AI
-                  </span>
-                  <Button size="sm" onClick={askAi} disabled={ai.loading}>
-                    {ai.loading ? "Думаю…" : ai.text ? "Обновить" : "Подсказать"}
-                  </Button>
-                </div>
-                {ai.text && <p className="mt-2 whitespace-pre-wrap text-sm">{ai.text}</p>}
-                {ai.error && <p className="mt-2 text-sm text-destructive">{ai.error}</p>}
-                {!ai.text && !ai.error && !ai.loading && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Учитывает этап, смету, заметки и историю касаний. Сохраните изменения перед
-                    запросом.
+            <Block title="Пациент и обращение">
+              <Field label="Пациент">
+                <Input
+                  value={f.patient_name ?? ""}
+                  onChange={(e) => set({ patient_name: e.target.value })}
+                />
+              </Field>
+              <Field label="Телефон" req>
+                <Input
+                  value={phoneRaw}
+                  onChange={(e) => setPhoneRaw(e.target.value)}
+                  onBlur={() => {
+                    const p = normalizePhone(phoneRaw);
+                    if (p) setPhoneRaw(p);
+                  }}
+                  placeholder="0555 123 456"
+                />
+              </Field>
+              <Field label="Дата заявки" req>
+                <Input
+                  type="date"
+                  value={f.lead_date ?? ""}
+                  onChange={(e) => set({ lead_date: e.target.value })}
+                />
+              </Field>
+              <Field label="Источник" req>
+                <select
+                  className={sel}
+                  value={f.source ?? ""}
+                  onChange={(e) => set({ source: e.target.value })}
+                >
+                  <option value="">—</option>
+                  {sources.map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Линия" req>
+                <select
+                  className={sel}
+                  value={f.line ?? ""}
+                  onChange={(e) => set({ line: e.target.value })}
+                >
+                  <option value="">—</option>
+                  {LINES.map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Канал">
+                <select
+                  className={sel}
+                  value={f.channel ?? ""}
+                  onChange={(e) => set({ channel: e.target.value })}
+                >
+                  <option value="">—</option>
+                  {CHANNELS.map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Филиал" req>
+                <select
+                  className={sel}
+                  value={f.branch_code}
+                  onChange={(e) =>
+                    set({
+                      branch_code: e.target.value,
+                      funnel: BRANCH_FUNNELS[e.target.value]?.[0] ?? "nova_general",
+                      doctor_id: null,
+                    })
+                  }
+                >
+                  {BRANCHES.map((b) => (
+                    <option key={b.code} value={b.code}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Воронка" req>
+                <select
+                  className={sel}
+                  value={f.funnel}
+                  onChange={(e) => set({ funnel: e.target.value, stage: 1 })}
+                >
+                  {(BRANCH_FUNNELS[f.branch_code] ?? []).map((c) => (
+                    <option key={c} value={c}>
+                      {FUNNELS[c].name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Этап">
+                <select
+                  className={sel}
+                  value={f.stage}
+                  onChange={(e) => {
+                    const st = Number(e.target.value);
+                    set({
+                      stage: st,
+                      ...(f.funnel === "nova_check" && st >= 3 && !f.prepayment
+                        ? { prepayment: NOVA_CHECK_PREPAYMENT }
+                        : {}),
+                    });
+                  }}
+                >
+                  {stages.map((s) => (
+                    <option key={s.n} value={s.n}>
+                      {s.n === FINAL ? "✓ " : s.n === REANIMATION ? "" : s.n + ". "}
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div className="col-span-full grid grid-cols-2 gap-2 rounded-lg bg-muted/50 p-3 text-xs sm:grid-cols-4">
+                {(
+                  [
+                    ["Привёл", f.brought_by_email],
+                    ["Записал", f.booked_by_email],
+                    ["Подтвердил", f.confirmed_by_email],
+                    ["Довёл до операции", f.operation_by_email],
+                  ] as const
+                ).map(([l, v]) => (
+                  <div key={l}>
+                    <div className="text-muted-foreground">{l}</div>
+                    <div className="truncate font-medium">{v || "—"}</div>
+                  </div>
+                ))}
+              </div>
+              <Field label="Ответственный (email)">
+                <Input
+                  value={f.responsible_email ?? ""}
+                  onChange={(e) => set({ responsible_email: e.target.value })}
+                />
+              </Field>
+              <Field label="Следующее касание">
+                <Input
+                  type="date"
+                  value={f.next_touch ?? ""}
+                  onChange={(e) => set({ next_touch: e.target.value || null })}
+                />
+              </Field>
+              <Field label="Страховая">
+                <select
+                  className={sel}
+                  value={f.insurance ?? ""}
+                  onChange={(e) => set({ insurance: e.target.value || null })}
+                >
+                  <option value="">Нет</option>
+                  {insurances.map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Партнёр (агентская программа)">
+                <select
+                  className={sel}
+                  value={f.partner_id ?? ""}
+                  onChange={(e) => set({ partner_id: e.target.value || null })}
+                >
+                  <option value="">Нет</option>
+                  {partners.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={!!f.foreigner}
+                  onCheckedChange={(v) => set({ foreigner: !!v })}
+                />
+                Иностранный пациент (+10%)
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={!!f.interest} onCheckedChange={(v) => set({ interest: !!v })} />
+                Есть интерес
+              </label>
+              <div className="sm:col-span-2">
+                <Field label="Комментарий">
+                  <Textarea
+                    rows={2}
+                    value={f.comment ?? ""}
+                    onChange={(e) => set({ comment: e.target.value })}
+                  />
+                </Field>
+              </div>
+            </Block>
+
+            <Block title="Запись и явка">
+              <Field label={funnelDef?.surgery ? "Хирург" : "Врач"}>
+                <select
+                  className={sel}
+                  value={f.doctor_id ?? ""}
+                  onChange={(e) => set({ doctor_id: e.target.value || null })}
+                >
+                  <option value="">—</option>
+                  {branchDoctors.map((d) => (
+                    <option key={d.id} value={d.id} disabled={d.status === "Декрет"}>
+                      {d.full_name} — {d.specialty}
+                      {d.status === "Декрет" ? " (декрет)" : ""}
+                    </option>
+                  ))}
+                </select>
+                {doctor && (
+                  <p className="text-xs text-muted-foreground">Приём: {doctor.schedule}</p>
+                )}
+              </Field>
+              <Field label="Дата и время визита">
+                <Input
+                  type="datetime-local"
+                  value={f.visit_date ? f.visit_date.slice(0, 16) : ""}
+                  onChange={(e) =>
+                    set({ visit_date: e.target.value ? e.target.value + ":00+06:00" : null })
+                  }
+                />
+              </Field>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={!!f.confirmed}
+                  onCheckedChange={(v) => set({ confirmed: !!v })}
+                />
+                Подтверждено
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={!!f.came}
+                  onCheckedChange={(v) => set({ came: !!v, visited_at: v ? bishkekDate() : null })}
+                />
+                Пришёл
+              </label>
+            </Block>
+
+            {f.funnel === "nova_check" ? (
+              <Block title="Nova Check">
+                <Field label="Предоплата, сом">
+                  <Input
+                    type="number"
+                    value={f.prepayment ?? ""}
+                    onChange={(e) =>
+                      set({ prepayment: e.target.value ? Number(e.target.value) : null })
+                    }
+                  />
+                </Field>
+                <Field label="Дата предоплаты">
+                  <Input
+                    type="date"
+                    value={f.prepayment_date ?? ""}
+                    onChange={(e) => set({ prepayment_date: e.target.value || null })}
+                  />
+                </Field>
+                <p className="text-xs text-muted-foreground sm:col-span-2">
+                  Предоплата {fmtMoney(NOVA_CHECK_PREPAYMENT)} (Элсом / Мбанк). Обследование 3 дня,
+                  затем паспорт здоровья; повторный чекап — через год. Не больше{" "}
+                  {NOVA_CHECK_DAILY_LIMIT} чекапов в день.
+                </p>
+              </Block>
+            ) : funnelDef?.surgery ? (
+              <Block title="Операция и оплата">
+                <Field label="Дата операции">
+                  <Input
+                    type="date"
+                    value={f.operation_date ?? ""}
+                    onChange={(e) => set({ operation_date: e.target.value || null })}
+                  />
+                </Field>
+                <Field label="Стоимость, сом">
+                  <Input
+                    type="number"
+                    value={f.operation_cost ?? ""}
+                    onChange={(e) =>
+                      set({ operation_cost: e.target.value ? Number(e.target.value) : null })
+                    }
+                  />
+                </Field>
+                <Field label="Предоплата, сом">
+                  <Input
+                    type="number"
+                    value={f.prepayment ?? ""}
+                    onChange={(e) =>
+                      set({ prepayment: e.target.value ? Number(e.target.value) : null })
+                    }
+                  />
+                </Field>
+                <Field label="Дата предоплаты">
+                  <Input
+                    type="date"
+                    value={f.prepayment_date ?? ""}
+                    onChange={(e) => set({ prepayment_date: e.target.value || null })}
+                  />
+                </Field>
+                <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                  <Checkbox
+                    checked={!!f.installment}
+                    onCheckedChange={(v) => set({ installment: !!v })}
+                  />
+                  Рассрочка (О!Банк)
+                </label>
+                {f.installment && (
+                  <p className="rounded-lg bg-secondary p-2.5 text-xs text-secondary-foreground sm:col-span-2">
+                    «Рассрочка О!Банк на 3, 6 или 9 месяцев, до 250 000 сом. Скидки и акции при
+                    рассрочке не действуют. Нужны паспорт и справка с работы за 3–6 месяцев
+                    {totals.kgs > INSTALLMENT_GUARANTOR_FROM ? ", а также поручитель" : ""}.
+                    Оформление на ресепшене Абдумомунова, 2 и 3 этаж.»
                   </p>
                 )}
+              </Block>
+            ) : null}
+
+            <section className="rounded-xl border bg-card p-4">
+              <h3 className="mb-3 text-sm font-semibold text-primary">Услуги и смета</h3>
+              <div className="relative">
+                <Input
+                  placeholder="Найти услугу в прайсе филиала…"
+                  value={svcSearch}
+                  onChange={(e) => setSvcSearch(e.target.value)}
+                />
+                {svcResults.length > 0 && (
+                  <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border bg-popover shadow-lg">
+                    {svcResults.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => addItem(s)}
+                        className="flex w-full justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted"
+                      >
+                        <span>
+                          {s.name}
+                          <span className="block text-xs text-muted-foreground">
+                            {s.direction}
+                            {s.note ? ` · ${s.note}` : ""}
+                          </span>
+                        </span>
+                        <span className="shrink-0 font-medium">
+                          {s.price_from ? "от " : ""}
+                          {s.price_text || fmtMoney(Number(s.price ?? 0), s.currency)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              <h3 className="mb-3 text-sm font-semibold text-primary">Действия</h3>
-              <div className="flex flex-wrap gap-2">
-                <select
-                  className={sel + " w-56"}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                >
-                  <option value="">Причина…</option>
-                  {reasons.map((r) => (
-                    <option key={r}>{r}</option>
-                  ))}
-                </select>
-                {OUTCOMES.map((o) => (
-                  <Button key={o} size="sm" variant="outline" onClick={() => closeAs(o)}>
-                    {o === "Потерянный" ? "Потерян" : o}
-                  </Button>
+              <div className="mt-3 divide-y">
+                {items.map((i) => (
+                  <div key={i.id} className="flex items-center gap-2 py-2 text-sm">
+                    <div className="flex-1">
+                      {i.name}
+                      {i.is_package && (
+                        <Badge variant="outline" className="ml-2">
+                          пакет
+                        </Badge>
+                      )}
+                    </div>
+                    <Input
+                      type="number"
+                      min={1}
+                      className="h-8 w-14"
+                      value={i.qty}
+                      onChange={(e) => updItem(i.id, { qty: Math.max(1, Number(e.target.value)) })}
+                      aria-label="Количество"
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="h-8 w-16"
+                      value={i.discount}
+                      disabled={i.is_package}
+                      onChange={(e) => updItem(i.id, { discount: Number(e.target.value) })}
+                      aria-label="Скидка %"
+                      title="Скидка %"
+                    />
+                    <div className="w-28 text-right">
+                      {i.price_from ? "от " : ""}
+                      {fmtMoney(i.price * i.qty, i.currency)}
+                    </div>
+                    <button
+                      onClick={() => delItem(i.id)}
+                      aria-label="Удалить"
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
                 ))}
-                {f.outcome && (
+                {!items.length && (
+                  <p className="py-2 text-sm text-muted-foreground">Услуги не добавлены</p>
+                )}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+                <div className="font-semibold">Итого: {totalsText(totals)}</div>
+                {funnelDef?.surgery && (
                   <Button
                     size="sm"
-                    variant="secondary"
-                    onClick={() => save({ outcome: null, outcome_reason: null })}
+                    variant="outline"
+                    onClick={() => set({ operation_cost: totals.kgs })}
                   >
-                    Вернуть в воронку
-                  </Button>
-                )}
-                {(f.branch_code === "moskovskaya" || f.branch_code === "abd2") && (
-                  <Button size="sm" variant="secondary" onClick={toSurgeon}>
-                    Направить к хирургу
+                    Записать в стоимость операции
                   </Button>
                 )}
               </div>
             </section>
-          )}
 
-          {leadId && (
-            <section className="rounded-xl border bg-card p-4">
-              <h3 className="mb-3 text-sm font-semibold text-primary">Заметки и касания</h3>
-              <div className="mb-3 flex gap-2">
-                <Textarea
-                  rows={2}
-                  placeholder="Заметка: что важно пациенту, возражения, договорённости…"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                />
-                <Button size="sm" variant="outline" onClick={addNote} disabled={!note.trim()}>
-                  Сохранить заметку
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <select
-                  className={sel + " w-32"}
-                  value={touch.channel}
-                  onChange={(e) => setTouch({ ...touch, channel: e.target.value })}
-                >
-                  {CHANNELS.map((c) => (
-                    <option key={c}>{c}</option>
+            {leadId && (
+              <section className="rounded-xl border bg-card p-4">
+                <div className="mb-4 rounded-lg bg-secondary p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 text-sm font-semibold text-secondary-foreground">
+                      <Sparkles className="size-4" />
+                      Следующий шаг от AI
+                    </span>
+                    <Button size="sm" onClick={askAi} disabled={ai.loading}>
+                      {ai.loading ? "Думаю…" : ai.text ? "Обновить" : "Подсказать"}
+                    </Button>
+                  </div>
+                  {ai.text && <p className="mt-2 whitespace-pre-wrap text-sm">{ai.text}</p>}
+                  {ai.error && <p className="mt-2 text-sm text-destructive">{ai.error}</p>}
+                  {!ai.text && !ai.error && !ai.loading && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Учитывает этап, смету, заметки и историю касаний. Сохраните изменения перед
+                      запросом.
+                    </p>
+                  )}
+                </div>
+                <h3 className="mb-3 text-sm font-semibold text-primary">Действия</h3>
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    className={sel + " w-56"}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                  >
+                    <option value="">Причина…</option>
+                    {reasons.map((r) => (
+                      <option key={r}>{r}</option>
+                    ))}
+                  </select>
+                  {OUTCOMES.map((o) => (
+                    <Button key={o} size="sm" variant="outline" onClick={() => closeAs(o)}>
+                      {o === "Потерянный" ? "Потерян" : o}
+                    </Button>
                   ))}
-                </select>
-                <Input
-                  className="min-w-40 flex-1"
-                  placeholder="Результат"
-                  value={touch.result}
-                  onChange={(e) => setTouch({ ...touch, result: e.target.value })}
-                />
-                <label className="flex items-center gap-1.5 text-sm">
-                  <Checkbox
-                    checked={touch.no_answer}
-                    onCheckedChange={(v) => setTouch({ ...touch, no_answer: !!v })}
+                  {f.outcome && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => save({ outcome: null, outcome_reason: null })}
+                    >
+                      Вернуть в воронку
+                    </Button>
+                  )}
+                  {(f.branch_code === "moskovskaya" || f.branch_code === "abd2") && (
+                    <Button size="sm" variant="secondary" onClick={toSurgeon}>
+                      Направить к хирургу
+                    </Button>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {leadId && (
+              <section className="rounded-xl border bg-card p-4">
+                <h3 className="mb-3 text-sm font-semibold text-primary">Заметки и касания</h3>
+                <div className="mb-3 flex gap-2">
+                  <Textarea
+                    rows={2}
+                    placeholder="Заметка: что важно пациенту, возражения, договорённости…"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
                   />
-                  Не ответил
-                </label>
-                <Button size="sm" onClick={addTouch}>
-                  Добавить
-                </Button>
-              </div>
-              <ul className="mt-3 space-y-1 text-sm">
-                {(touchesQ.data ?? []).map((t) => (
-                  <li key={t.id} className="text-muted-foreground">
-                    <span className="text-foreground">{fmtDate(t.touched_at)}</span> · {t.channel} ·{" "}
-                    {t.no_answer ? "не ответил" : t.result} · {t.author_email}
-                  </li>
-                ))}
-              </ul>
-              <h3 className="mb-2 mt-4 text-sm font-semibold text-primary">История</h3>
-              <ul className="space-y-1 text-xs text-muted-foreground">
-                {(histQ.data ?? []).map((h) => (
-                  <li key={h.id}>
-                    {fmtDate(h.changed_at)} · {h.author_email} ·{" "}
-                    {Object.keys(h.changes as object).join(", ")}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </div>
+                  <Button size="sm" variant="outline" onClick={addNote} disabled={!note.trim()}>
+                    Сохранить заметку
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <select
+                    className={sel + " w-32"}
+                    value={touch.channel}
+                    onChange={(e) => setTouch({ ...touch, channel: e.target.value })}
+                  >
+                    {CHANNELS.map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </select>
+                  <Input
+                    className="min-w-40 flex-1"
+                    placeholder="Результат"
+                    value={touch.result}
+                    onChange={(e) => setTouch({ ...touch, result: e.target.value })}
+                  />
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <Checkbox
+                      checked={touch.no_answer}
+                      onCheckedChange={(v) => setTouch({ ...touch, no_answer: !!v })}
+                    />
+                    Не ответил
+                  </label>
+                  <Button size="sm" onClick={addTouch}>
+                    Добавить
+                  </Button>
+                </div>
+                <ul className="mt-3 space-y-1 text-sm">
+                  {(touchesQ.data ?? []).map((t) => (
+                    <li key={t.id} className="text-muted-foreground">
+                      <span className="text-foreground">{fmtDate(t.touched_at)}</span> · {t.channel}{" "}
+                      · {t.no_answer ? "не ответил" : t.result} · {t.author_email}
+                    </li>
+                  ))}
+                </ul>
+                <h3 className="mb-2 mt-4 text-sm font-semibold text-primary">История</h3>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  {(histQ.data ?? []).map((h) => (
+                    <li key={h.id}>
+                      {fmtDate(h.changed_at)} · {h.author_email} ·{" "}
+                      {Object.keys(h.changes as object).join(", ")}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
+        </MissCtx.Provider>
         <div className="fixed bottom-0 right-0 flex w-full justify-end gap-2 border-t bg-card p-3 sm:max-w-2xl">
           <Button variant="outline" onClick={onClose}>
             Закрыть

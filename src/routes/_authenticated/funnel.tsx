@@ -13,6 +13,7 @@ import {
   fmtDate,
   leadCategory,
   missingForStage,
+  openTasks,
   stageList,
   type FunnelCode,
 } from "@/lib/crm";
@@ -50,6 +51,12 @@ function FunnelPage() {
     const miss = missingForStage(l, stage);
     if (miss.length) {
       toast.error("Для этого этапа заполните: " + miss.join(", "));
+      openLead(l.id);
+      return;
+    }
+    const open = stage > l.stage ? openTasks(l, today) : [];
+    if (open.length) {
+      toast.error("Сначала закройте: " + open.join("; "));
       openLead(l.id);
       return;
     }

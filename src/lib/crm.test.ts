@@ -273,3 +273,26 @@ describe("single card attribution", () => {
     expect(by["mgr@x"]!.operations).toBe(1);
   });
 });
+
+import { openTasks } from "./crm";
+describe("open tasks", () => {
+  const today = "2026-11-12";
+  it("past visit without came, overdue touch are open; closed lead has none", () => {
+    const l = {
+      ...base,
+      stage: 3,
+      doctor_id: "d",
+      visit_date: "2026-11-10T10:00:00+06:00",
+      came: false,
+      next_touch: "2026-11-11",
+    };
+    expect(openTasks(l, today)).toEqual(["Визит прошёл — отметьте явку", "Просрочено касание"]);
+    expect(openTasks({ ...l, outcome: "Потерянный" }, today)).toEqual([]);
+  });
+  it("missing next touch and missing fields are open", () => {
+    expect(openTasks({ ...base, stage: 3 }, today)).toEqual([
+      "Не заполнено: Врач, Дата визита",
+      "Не назначено следующее касание",
+    ]);
+  });
+});
