@@ -26,6 +26,7 @@ import { summarizeReport } from "@/lib/report-ai.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SurgeryReport } from "@/components/crm/SurgeryReport";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -50,6 +51,39 @@ export const Route = createFileRoute("/_authenticated/reports")({
 const sel = "h-9 rounded-md border border-input bg-card px-2 text-sm";
 
 function ReportsPage() {
+  const [tab, setTab] = useState<"summary" | "surgery">("summary");
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+          Аналитика продаж
+        </div>
+        <h1 className="font-display text-4xl font-bold">
+          {tab === "summary" ? "Сводка" : "Хирургия 3 этаж"}
+        </h1>
+      </div>
+      <div className="flex w-fit rounded-xl bg-muted p-1">
+        {(
+          [
+            ["summary", "Сводка"],
+            ["surgery", "Хирургия 3 этаж"],
+          ] as const
+        ).map(([k, l]) => (
+          <button
+            key={k}
+            onClick={() => setTab(k)}
+            className={`rounded-lg px-4 py-1.5 text-sm ${tab === k ? "bg-card font-semibold text-foreground shadow-sm" : "text-muted-foreground"}`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      {tab === "summary" ? <SummaryReport /> : <SurgeryReport />}
+    </div>
+  );
+}
+
+function SummaryReport() {
   const { branch, isAdmin } = useCrm();
   const [kind, setKind] = useState<PeriodKind>("month");
   const [date, setDate] = useState(bishkekDate());
@@ -121,10 +155,7 @@ function ReportsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="mr-auto">
-          <div className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">Аналитика продаж</div>
-          <h1 className="font-display text-4xl font-bold">Сводка</h1>
-        </div>
+        <div className="mr-auto" />
         <div className="flex rounded-xl bg-muted p-1">
           {(Object.keys(PERIOD_LABEL) as PeriodKind[]).map((k) => (
             <button
@@ -326,15 +357,13 @@ function Reanimation({
       })
       .in("id", ids);
     if (!error)
-      await supabase
-        .from("lead_history")
-        .insert(
-          ids.map((id) => ({
-            lead_id: id,
-            author_email: me.email,
-            changes: { reanimation: { to: canAssign ? assignee : me.email } },
-          })),
-        );
+      await supabase.from("lead_history").insert(
+        ids.map((id) => ({
+          lead_id: id,
+          author_email: me.email,
+          changes: { reanimation: { to: canAssign ? assignee : me.email } },
+        })),
+      );
     setBusy(false);
     if (error) {
       toast.error(error.message);

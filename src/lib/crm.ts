@@ -450,3 +450,115 @@ export function reanimationCandidates<T extends ReportLead>(leads: T[], today: s
       l.lead_date <= edge,
   );
 }
+
+/* ---------- Surgery report (3rd floor format) ---------- */
+export type SurgeryLead = {
+  id: string;
+  lead_date: string;
+  stage: number;
+  outcome?: string | null;
+  came?: boolean | null;
+  doctor_id?: string | null;
+  visit_date?: string | null;
+  visited_at?: string | null;
+  operation_date?: string | null;
+  operation_cost?: number | null;
+  prepayment?: number | null;
+  prepayment_date?: string | null;
+};
+export type SurgeryDay = {
+  date: string;
+  requests: number;
+  bookedConsult: number;
+  heldConsult: number;
+  bookedOp: number;
+  doneOp: number;
+  refusals: number;
+  reschedules: number;
+  conv: number; // bookedOp / heldConsult, %
+};
+const day = (s?: string | null) =>
+  s ? bishkekDate(new Date(s.length > 10 ? s : s + "T12:00:00+06:00")) : null;
+const bookedOpDate = (l: SurgeryLead) =>
+  l.stage >= 6 && l.stage !== REANIMATION ? (l.prepayment_date ?? l.operation_date ?? null) : null;
+
+/** One row per calendar day in [from,to], like the «Ежедневный отчёт» sheet. */
+export function surgeryDaily(
+  leads: SurgeryLead[],
+  from: string,
+  to: string,
+  rescheduleDates: string[] = [],
+): SurgeryDay[] {
+  const out: SurgeryDay[] = [];
+  for (
+    let t = Date.parse(from + "T00:00:00Z");
+    t <= Date.parse(to + "T00:00:00Z");
+    t += 86400_000
+  ) {
+    const d = new Date(t).toISOString().slice(0, 10);
+    const held = leads.filter((l) => l.came && day(l.visited_at ?? l.visit_date) === d).length;
+    const booked = leads.filter((l) => bookedOpDate(l) === d).length;
+    out.push({
+      date: d,
+      requests: leads.filter((l) => l.lead_date === d).length,
+      bookedConsult: leads.filter((l) => day(l.visit_date) === d).length,
+      heldConsult: held,
+      bookedOp: booked,
+      doneOp: leads.filter((l) => l.stage === FINAL && l.operation_date === d).length,
+      refusals: leads.filter((l) => l.outcome === "Потерянный" && l.lead_date === d).length,
+      reschedules: rescheduleDates.filter((x) => day(x) === d).length,
+      conv: pct(booked, held),
+    });
+  }
+  return out;
+}
+
+export function surgeryTotal(days: SurgeryDay[]): SurgeryDay {
+  const s = (k: keyof SurgeryDay) => days.reduce((a, d) => a + (d[k] as number), 0);
+  return {
+    date: "Итого",
+    requests: s("requests"),
+    bookedConsult: s("bookedConsult"),
+    heldConsult: s("heldConsult"),
+    bookedOp: s("bookedOp"),
+    doneOp: s("doneOp"),
+    refusals: s("refusals"),
+    reschedules: s("reschedules"),
+    conv: pct(s("bookedOp"), s("heldConsult")),
+  };
+}
+
+export type SurgeonRow = {
+  doctorId: string;
+  bookedConsult: number;
+  heldConsult: number;
+  bookedOp: number;
+  doneOp: number;
+  conv: number; // bookedOp / heldConsult
+  reach: number; // doneOp / bookedOp
+  sum: number;
+  prepay: number;
+};
+/** «Отчёт по хирургам»: leads of the period grouped by surgeon. */
+export function surgeonReport(leads: SurgeryLead[]): SurgeonRow[] {
+  const m = new Map<string, SurgeryLead[]>();
+  for (const l of leads) if (l.doctor_id) m.set(l.doctor_id, [...(m.get(l.doctor_id) ?? []), l]);
+  return [...m.entries()]
+    .map(([doctorId, ls]) => {
+      const held = ls.filter((l) => l.came).length;
+      const booked = ls.filter((l) => l.stage >= 6 && l.stage !== REANIMATION).length;
+      const done = ls.filter((l) => l.stage === FINAL).length;
+      return {
+        doctorId,
+        bookedConsult: ls.filter((l) => l.visit_date || l.came).length,
+        heldConsult: held,
+        bookedOp: booked,
+        doneOp: done,
+        conv: pct(booked, held),
+        reach: pct(done, booked),
+        sum: ls.reduce((a, l) => a + (l.stage === FINAL ? Number(l.operation_cost ?? 0) : 0), 0),
+        prepay: ls.reduce((a, l) => a + Number(l.prepayment ?? 0), 0),
+      };
+    })
+    .sort((a, b) => b.bookedConsult - a.bookedConsult);
+}

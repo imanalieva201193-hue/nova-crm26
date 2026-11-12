@@ -113,3 +113,53 @@ describe("reports", () => {
     expect(r.map((x) => x.id)).toEqual(["1", "4"]);
   });
 });
+
+import { surgeryDaily, surgeryTotal, surgeonReport } from "./crm";
+describe("surgery report", () => {
+  const S = (id: string, o: Record<string, unknown>) => ({
+    id,
+    lead_date: "2026-11-02",
+    stage: 2,
+    ...o,
+  });
+  const leads = [
+    S("a", {}),
+    S("b", { stage: 5, came: true, doctor_id: "d1", visit_date: "2026-11-03T10:00:00+06:00" }),
+    S("c", {
+      stage: 6,
+      came: true,
+      doctor_id: "d1",
+      visit_date: "2026-11-03T10:00:00+06:00",
+      operation_date: "2026-11-10",
+    }),
+    S("d", {
+      stage: 10,
+      came: true,
+      doctor_id: "d1",
+      visit_date: "2026-11-02T10:00:00+06:00",
+      operation_date: "2026-11-10",
+      operation_cost: 100000,
+      prepayment: 20000,
+    }),
+    S("e", { outcome: "Потерянный" }),
+  ];
+  it("daily: requests by request date, consults by visit day, conversion = booked op / held consults", () => {
+    const days = surgeryDaily(leads, "2026-11-02", "2026-11-10");
+    expect(days[0]).toMatchObject({ requests: 5, refusals: 1, heldConsult: 1 });
+    expect(days[1]).toMatchObject({ bookedConsult: 2, heldConsult: 2 });
+    const t = surgeryTotal(days);
+    expect(t).toMatchObject({ heldConsult: 3, bookedOp: 2, doneOp: 1, conv: 66.7 });
+  });
+  it("per surgeon: conversion and reach to operation", () => {
+    const [r] = surgeonReport(leads);
+    expect(r).toMatchObject({
+      heldConsult: 3,
+      bookedOp: 2,
+      doneOp: 1,
+      conv: 66.7,
+      reach: 50,
+      sum: 100000,
+      prepay: 20000,
+    });
+  });
+});
