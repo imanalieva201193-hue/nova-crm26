@@ -71,3 +71,45 @@ describe("Nova CRM rules", () => {
     expect(shouldSuggestLost(t.slice(0, 2), now)).toBe(false);
   });
 });
+
+import { periodRange, reportStats, reanimationCandidates, leadRevenue } from "./crm";
+describe("reports", () => {
+  it("period ranges", () => {
+    expect(periodRange("day", "2026-11-12")).toEqual({ from: "2026-11-12", to: "2026-11-12" });
+    expect(periodRange("month", "2026-02-10")).toEqual({ from: "2026-02-01", to: "2026-02-28" });
+    expect(periodRange("year", "2026-11-12")).toEqual({ from: "2026-01-01", to: "2026-12-31" });
+  });
+  it("conversion excludes trash; avg check over won", () => {
+    const L = (id: string, o: Partial<typeof base & { outcome: string }>) => ({
+      ...base,
+      id,
+      ...o,
+    });
+    const leads = [L("a", { stage: FINAL }), L("b", {}), L("c", { outcome: "Мусорный" })];
+    const s = reportStats(leads, { a: 100000 });
+    expect(s.conv).toBe(50);
+    expect(s.avgCheck).toBe(100000);
+    expect(s.trash).toBe(1);
+  });
+  it("revenue uses operation cost, else estimate", () => {
+    expect(leadRevenue({ ...base, id: "x", stage: FINAL, operation_cost: 200000 })).toBe(200000);
+    expect(
+      leadRevenue({ ...base, id: "x", stage: FINAL }, [
+        { name: "a", qty: 2, price: 1000, currency: "KGS" },
+      ]),
+    ).toBe(2000);
+    expect(leadRevenue({ ...base, id: "x", stage: 3, operation_cost: 5 })).toBe(0);
+  });
+  it("reanimation: lost/no-show older than 14 days", () => {
+    const r = reanimationCandidates(
+      [
+        { ...base, id: "1", outcome: "Потерянный", lead_date: "2026-10-01" },
+        { ...base, id: "2", outcome: "Потерянный", lead_date: "2026-11-05" },
+        { ...base, id: "3", outcome: "Мусорный", lead_date: "2026-10-01" },
+        { ...base, id: "4", outcome: "Не пришёл", lead_date: "2026-10-29" },
+      ],
+      "2026-11-12",
+    );
+    expect(r.map((x) => x.id)).toEqual(["1", "4"]);
+  });
+});

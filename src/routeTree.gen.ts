@@ -16,6 +16,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedFunnelRouteImport } from './routes/_authenticated/funnel'
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
 import { Route as AuthenticatedPartnersRouteImport } from './routes/_authenticated/partners'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 
@@ -53,6 +54,11 @@ const AuthenticatedPartnersRoute = AuthenticatedPartnersRouteImport.update({
   path: '/partners',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSalesRoute = AuthenticatedSalesRouteImport.update({
   id: '/sales',
   path: '/sales',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/funnel': typeof AuthenticatedFunnelRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/partners': typeof AuthenticatedPartnersRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/tasks': typeof AuthenticatedTasksRoute
 }
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/funnel': typeof AuthenticatedFunnelRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/partners': typeof AuthenticatedPartnersRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/sales': typeof AuthenticatedSalesRoute
   '/tasks': typeof AuthenticatedTasksRoute
 }
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/_authenticated/funnel': typeof AuthenticatedFunnelRoute
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
   '/_authenticated/partners': typeof AuthenticatedPartnersRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
 }
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/funnel'
     | '/leads'
     | '/partners'
+    | '/reports'
     | '/sales'
     | '/tasks'
   fileRoutesByTo: FileRoutesByTo
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/funnel'
     | '/leads'
     | '/partners'
+    | '/reports'
     | '/sales'
     | '/tasks'
   id:
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/_authenticated/funnel'
     | '/_authenticated/leads'
     | '/_authenticated/partners'
+    | '/_authenticated/reports'
     | '/_authenticated/sales'
     | '/_authenticated/tasks'
   fileRoutesById: FileRoutesById
@@ -187,6 +199,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartnersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/sales': {
       id: '/_authenticated/sales'
       path: '/sales'
@@ -209,6 +228,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFunnelRoute: typeof AuthenticatedFunnelRoute
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
   AuthenticatedPartnersRoute: typeof AuthenticatedPartnersRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
 }
@@ -218,6 +238,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFunnelRoute: AuthenticatedFunnelRoute,
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
   AuthenticatedPartnersRoute: AuthenticatedPartnersRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
 }

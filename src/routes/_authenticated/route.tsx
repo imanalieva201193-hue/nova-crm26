@@ -22,6 +22,7 @@ import {
   Stethoscope,
   Handshake,
   Settings,
+  BarChart3,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -39,6 +40,7 @@ const NAV = [
   { to: "/tasks", label: "Задачи", icon: CheckSquare },
   { to: "/sales", label: "Отдел продаж", icon: Stethoscope },
   { to: "/partners", label: "Партнёры", icon: Handshake },
+  { to: "/reports", label: "Отчёты", icon: BarChart3 },
 ] as const;
 
 function Shell() {
