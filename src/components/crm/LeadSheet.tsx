@@ -39,6 +39,9 @@ import {
 } from "@/lib/crm";
 import { partnersQ, servicesQ, useDoctors, useLookups, type Lead } from "./data";
 import { useCrm, type NewLeadPreset } from "./context";
+import { useServerFn } from "@tanstack/react-start";
+import { suggestNextStep } from "@/lib/next-step.functions";
+import { Sparkles } from "lucide-react";
 
 type Form = Partial<Lead> & { funnel: string; stage: number; branch_code: string };
 const sel = "h-9 w-full rounded-md border border-input bg-card px-2 text-sm";
@@ -97,6 +100,11 @@ export function LeadSheet({
   const [reason, setReason] = useState("");
   const [svcSearch, setSvcSearch] = useState("");
   const [touch, setTouch] = useState({ channel: "Звонок", result: "", no_answer: false });
+  const [note, setNote] = useState("");
+  const [ai, setAi] = useState<{ loading: boolean; text?: string; error?: string }>({
+    loading: false,
+  });
+  const suggestFn = useServerFn(suggestNextStep);
   const [draftItems, setDraftItems] = useState<NonNullable<NewLeadPreset["items"]>>([]);
 
   const leadQ = useQuery({
@@ -165,6 +173,7 @@ export function LeadSheet({
       setDraftItems(preset.items ?? []);
     }
     setReason("");
+    setAi({ loading: false });
   }, [leadId, leadQ.data, preset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const items = leadId
@@ -289,21 +298,19 @@ export function LeadSheet({
         return;
       }
       if (draftItems.length)
-        await supabase
-          .from("lead_services")
-          .insert(
-            draftItems.map((i) => ({
-              lead_id: data.id,
-              service_id: i.service_id ?? null,
-              name: i.name,
-              qty: i.qty,
-              price: i.price,
-              currency: i.currency,
-              price_from: !!i.price_from,
-              discount: i.discount ?? 0,
-              is_package: !!i.is_package,
-            })),
-          );
+        await supabase.from("lead_services").insert(
+          draftItems.map((i) => ({
+            lead_id: data.id,
+            service_id: i.service_id ?? null,
+            name: i.name,
+            qty: i.qty,
+            price: i.price,
+            currency: i.currency,
+            price_from: !!i.price_from,
+            discount: i.discount ?? 0,
+            is_package: !!i.is_package,
+          })),
+        );
       await supabase
         .from("lead_history")
         .insert({ lead_id: data.id, author_email: me.email, changes: { создано: true } });
@@ -369,17 +376,39 @@ export function LeadSheet({
   }
   async function addTouch() {
     if (!leadId) return;
+    await supabase.from("touches").insert({
+      lead_id: leadId,
+      channel: touch.channel,
+      result: touch.result,
+      no_answer: touch.no_answer,
+      author_email: me.email,
+    });
+    setTouch({ ...touch, result: "", no_answer: false });
+    qc.invalidateQueries({ queryKey: ["touches", leadId] });
+  }
+  async function addNote() {
+    if (!leadId || !note.trim()) return;
     await supabase
       .from("touches")
       .insert({
         lead_id: leadId,
-        channel: touch.channel,
-        result: touch.result,
-        no_answer: touch.no_answer,
+        channel: "Заметка",
+        result: note.trim(),
+        no_answer: false,
         author_email: me.email,
       });
-    setTouch({ ...touch, result: "", no_answer: false });
+    setNote("");
     qc.invalidateQueries({ queryKey: ["touches", leadId] });
+  }
+  async function askAi() {
+    if (!leadId) return;
+    setAi({ loading: true });
+    try {
+      const r = await suggestFn({ data: { leadId } });
+      setAi(r.ok ? { loading: false, text: r.text } : { loading: false, error: r.error });
+    } catch {
+      setAi({ loading: false, error: "Не удалось получить рекомендацию" });
+    }
   }
   async function closeAs(outcome: string) {
     if (!reason) {
@@ -830,6 +859,25 @@ export function LeadSheet({
 
           {leadId && (
             <section className="rounded-xl border bg-card p-4">
+              <div className="mb-4 rounded-lg bg-secondary p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-secondary-foreground">
+                    <Sparkles className="size-4" />
+                    Следующий шаг от AI
+                  </span>
+                  <Button size="sm" onClick={askAi} disabled={ai.loading}>
+                    {ai.loading ? "Думаю…" : ai.text ? "Обновить" : "Подсказать"}
+                  </Button>
+                </div>
+                {ai.text && <p className="mt-2 whitespace-pre-wrap text-sm">{ai.text}</p>}
+                {ai.error && <p className="mt-2 text-sm text-destructive">{ai.error}</p>}
+                {!ai.text && !ai.error && !ai.loading && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Учитывает этап, смету, заметки и историю касаний. Сохраните изменения перед
+                    запросом.
+                  </p>
+                )}
+              </div>
               <h3 className="mb-3 text-sm font-semibold text-primary">Действия</h3>
               <div className="flex flex-wrap gap-2">
                 <select
@@ -867,7 +915,18 @@ export function LeadSheet({
 
           {leadId && (
             <section className="rounded-xl border bg-card p-4">
-              <h3 className="mb-3 text-sm font-semibold text-primary">Касания</h3>
+              <h3 className="mb-3 text-sm font-semibold text-primary">Заметки и касания</h3>
+              <div className="mb-3 flex gap-2">
+                <Textarea
+                  rows={2}
+                  placeholder="Заметка: что важно пациенту, возражения, договорённости…"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+                <Button size="sm" variant="outline" onClick={addNote} disabled={!note.trim()}>
+                  Сохранить заметку
+                </Button>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <select
                   className={sel + " w-32"}
