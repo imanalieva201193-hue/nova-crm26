@@ -694,3 +694,45 @@ export function checkupStats(leads: ReportLead[], revenue: Record<string, number
     revenue: leads.reduce((s, l) => s + (revenue[l.id] ?? 0), 0),
   };
 }
+
+// ---- Single patient card: who did what (each step credited once) ----
+export type Attribution = {
+  stage: number;
+  confirmed?: boolean | null;
+  brought_by_email?: string | null;
+  booked_by_email?: string | null;
+  confirmed_by_email?: string | null;
+  operation_by_email?: string | null;
+};
+/** Fields to stamp with `email` when a step is reached for the first time. Never overwrites. */
+export function attributionStamp(next: Attribution, email: string): Partial<Attribution> {
+  const out: Partial<Attribution> = {};
+  if (!next.brought_by_email) out.brought_by_email = email;
+  if (!next.booked_by_email && next.stage >= 3 && next.stage !== REANIMATION)
+    out.booked_by_email = email;
+  if (!next.confirmed_by_email && next.confirmed) out.confirmed_by_email = email;
+  if (!next.operation_by_email && next.stage === FINAL) out.operation_by_email = email;
+  return out;
+}
+export type ContributionRow = {
+  email: string;
+  brought: number;
+  booked: number;
+  confirmed: number;
+  operations: number;
+};
+/** Per-employee contribution; each patient counts once per step. */
+export function contributionReport(leads: Attribution[]): ContributionRow[] {
+  const m = new Map<string, ContributionRow>();
+  const row = (e: string) => {
+    if (!m.has(e)) m.set(e, { email: e, brought: 0, booked: 0, confirmed: 0, operations: 0 });
+    return m.get(e)!;
+  };
+  for (const l of leads) {
+    if (l.brought_by_email) row(l.brought_by_email).brought++;
+    if (l.booked_by_email) row(l.booked_by_email).booked++;
+    if (l.confirmed_by_email) row(l.confirmed_by_email).confirmed++;
+    if (l.operation_by_email) row(l.operation_by_email).operations++;
+  }
+  return [...m.values()].sort((a, b) => b.operations - a.operations || b.brought - a.brought);
+}

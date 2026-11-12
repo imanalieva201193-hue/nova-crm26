@@ -36,6 +36,7 @@ import {
   stageList,
   totalsText,
   type FunnelCode,
+  attributionStamp,
 } from "@/lib/crm";
 import { partnersQ, servicesQ, useDoctors, useLookups, type Lead } from "./data";
 import { useCrm, type NewLeadPreset } from "./context";
@@ -276,17 +277,20 @@ export function LeadSheet({
         return;
       }
     }
+    Object.assign(next, attributionStamp(next, me.email));
     if (!leadId) {
       const { data: dup } = await supabase
         .from("leads")
         .select("id, patient_name")
         .eq("phone", phone)
         .limit(1);
-      if (dup?.length)
-        toast.warning(
-          `Дубль: по этому номеру уже есть заявка (${dup[0]!.patient_name || "без имени"})`,
-          { action: { label: "Открыть", onClick: () => onCreated(dup[0]!.id) } },
+      if (dup?.length) {
+        toast.info(
+          `Пациент с этим номером уже есть (${dup[0]!.patient_name || "без имени"}) — открыта его карточка`,
         );
+        onCreated(dup[0]!.id);
+        return;
+      }
       const { id: _id, created_at: _c, ...payload } = next as Lead;
       const { data, error } = await supabase
         .from("leads")
@@ -388,15 +392,13 @@ export function LeadSheet({
   }
   async function addNote() {
     if (!leadId || !note.trim()) return;
-    await supabase
-      .from("touches")
-      .insert({
-        lead_id: leadId,
-        channel: "Заметка",
-        result: note.trim(),
-        no_answer: false,
-        author_email: me.email,
-      });
+    await supabase.from("touches").insert({
+      lead_id: leadId,
+      channel: "Заметка",
+      result: note.trim(),
+      no_answer: false,
+      author_email: me.email,
+    });
     setNote("");
     qc.invalidateQueries({ queryKey: ["touches", leadId] });
   }
@@ -590,6 +592,21 @@ export function LeadSheet({
                 ))}
               </select>
             </Field>
+            <div className="col-span-full grid grid-cols-2 gap-2 rounded-lg bg-muted/50 p-3 text-xs sm:grid-cols-4">
+              {(
+                [
+                  ["Привёл", f.brought_by_email],
+                  ["Записал", f.booked_by_email],
+                  ["Подтвердил", f.confirmed_by_email],
+                  ["Довёл до операции", f.operation_by_email],
+                ] as const
+              ).map(([l, v]) => (
+                <div key={l}>
+                  <div className="text-muted-foreground">{l}</div>
+                  <div className="truncate font-medium">{v || "—"}</div>
+                </div>
+              ))}
+            </div>
             <Field label="Ответственный (email)">
               <Input
                 value={f.responsible_email ?? ""}

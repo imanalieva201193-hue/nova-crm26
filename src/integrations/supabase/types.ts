@@ -279,11 +279,14 @@ export type Database = {
       }
       leads: {
         Row: {
+          booked_by_email: string | null
           branch_code: string
+          brought_by_email: string | null
           came: boolean
           channel: string | null
           comment: string | null
           confirmed: boolean
+          confirmed_by_email: string | null
           created_at: string
           doctor_id: string | null
           foreigner: boolean
@@ -295,6 +298,7 @@ export type Database = {
           lead_date: string
           line: string
           next_touch: string | null
+          operation_by_email: string | null
           operation_cost: number | null
           operation_date: string | null
           outcome: string | null
@@ -312,11 +316,14 @@ export type Database = {
           visited_at: string | null
         }
         Insert: {
+          booked_by_email?: string | null
           branch_code: string
+          brought_by_email?: string | null
           came?: boolean
           channel?: string | null
           comment?: string | null
           confirmed?: boolean
+          confirmed_by_email?: string | null
           created_at?: string
           doctor_id?: string | null
           foreigner?: boolean
@@ -328,6 +335,7 @@ export type Database = {
           lead_date?: string
           line: string
           next_touch?: string | null
+          operation_by_email?: string | null
           operation_cost?: number | null
           operation_date?: string | null
           outcome?: string | null
@@ -345,11 +353,14 @@ export type Database = {
           visited_at?: string | null
         }
         Update: {
+          booked_by_email?: string | null
           branch_code?: string
+          brought_by_email?: string | null
           came?: boolean
           channel?: string | null
           comment?: string | null
           confirmed?: boolean
+          confirmed_by_email?: string | null
           created_at?: string
           doctor_id?: string | null
           foreigner?: boolean
@@ -361,6 +372,7 @@ export type Database = {
           lead_date?: string
           line?: string
           next_touch?: string | null
+          operation_by_email?: string | null
           operation_cost?: number | null
           operation_date?: string | null
           outcome?: string | null

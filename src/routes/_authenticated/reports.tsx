@@ -27,7 +27,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Download } from "lucide-react";
+import { Download, Sparkles } from "lucide-react";
+import { summarizeReport } from "@/lib/report-ai.functions";
+import { contributionReport } from "@/lib/crm";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -251,6 +253,9 @@ function SummaryReport() {
             <GroupTable title="По филиалам" rows={stats.byBranch} />
           </div>
 
+          <ContributionTable leads={cur.data?.leads ?? []} />
+          <AiSummary text={text} />
+
           <section className="rounded-xl border bg-card p-4">
             <h2 className="mb-1 font-display text-lg font-bold">Рассылка руководителям</h2>
             <p className="mb-3 text-sm text-muted-foreground">
@@ -466,6 +471,84 @@ function Reanimation({
         ))}
         {!pool.length && <p className="py-2 text-muted-foreground">Сейчас некого реанимировать.</p>}
       </div>
+    </section>
+  );
+}
+
+function ContributionTable({ leads }: { leads: Lead[] }) {
+  const rows = contributionReport(leads);
+  return (
+    <section className="rounded-xl border bg-card p-4">
+      <h2 className="font-display text-lg font-bold">Вклад сотрудников</h2>
+      <p className="mb-3 text-sm text-muted-foreground">
+        Одна карточка на пациента: каждый шаг засчитывается один раз тому, кто его сделал.
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-left text-xs text-muted-foreground">
+            <tr>
+              <th className="py-1">Сотрудник</th>
+              <th>Привёл</th>
+              <th>Записал</th>
+              <th>Подтвердил</th>
+              <th>Довёл до операции</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.email} className="border-t">
+                <td className="py-1.5">{r.email}</td>
+                <td>{r.brought}</td>
+                <td>{r.booked}</td>
+                <td>{r.confirmed}</td>
+                <td className="font-semibold">{r.operations}</td>
+              </tr>
+            ))}
+            {!rows.length && (
+              <tr>
+                <td colSpan={5} className="py-3 text-muted-foreground">
+                  Нет данных за период
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function AiSummary({ text }: { text: string }) {
+  const [st, setSt] = useState<{ loading: boolean; text?: string; error?: string }>({
+    loading: false,
+  });
+  async function run() {
+    setSt({ loading: true });
+    const r = await summarizeReport({ data: { text } }).catch(() => ({
+      ok: false as const,
+      error: "Не удалось получить сводку",
+    }));
+    setSt(r.ok ? { loading: false, text: r.text } : { loading: false, error: r.error });
+  }
+  return (
+    <section className="rounded-xl border bg-card p-4">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-bold">AI-анализ периода</h2>
+        <Button size="sm" onClick={run} disabled={st.loading || !text}>
+          <Sparkles className="mr-1 h-4 w-4" />
+          {st.loading ? "Анализирую…" : "Проанализировать"}
+        </Button>
+      </div>
+      {st.error && <p className="text-sm text-destructive">{st.error}</p>}
+      {st.text ? (
+        <div className="text-sm whitespace-pre-wrap">{st.text}</div>
+      ) : (
+        !st.error && (
+          <p className="text-sm text-muted-foreground">
+            AI разберёт цифры за период: что хорошо, где проблемы и что сделать дальше.
+          </p>
+        )
+      )}
     </section>
   );
 }

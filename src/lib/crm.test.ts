@@ -164,13 +164,7 @@ describe("surgery report", () => {
   });
 });
 
-import {
-  prevRange,
-  dashStats,
-  funnelSteps,
-  checkupFunnelSteps,
-  checkupStats,
-} from "./crm";
+import { prevRange, dashStats, funnelSteps, checkupFunnelSteps, checkupStats } from "./crm";
 describe("dashboard", () => {
   it("week range is Monday–Sunday; prevRange shifts one period back", () => {
     expect(periodRange("week", "2026-11-12")).toEqual({ from: "2026-11-09", to: "2026-11-15" });
@@ -249,5 +243,33 @@ describe("checkup", () => {
     const steps = checkupFunnelSteps(leads);
     expect(steps.map((s) => s.count)).toEqual([6, 4, 2, 1]);
     expect(steps.map((s) => s.conv)).toEqual([100, 66.7, 50, 50]);
+  });
+});
+
+import { attributionStamp, contributionReport } from "./crm";
+describe("single card attribution", () => {
+  it("stamps each step once and never overwrites", () => {
+    expect(attributionStamp({ stage: 1 }, "a@x")).toEqual({ brought_by_email: "a@x" });
+    expect(
+      attributionStamp(
+        { stage: 10, confirmed: true, brought_by_email: "a@x", booked_by_email: "b@x" },
+        "c@x",
+      ),
+    ).toEqual({ confirmed_by_email: "c@x", operation_by_email: "c@x" });
+  });
+  it("counts one patient once per step across employees", () => {
+    const r = contributionReport([
+      {
+        stage: 10,
+        brought_by_email: "cc@x",
+        booked_by_email: "cc@x",
+        confirmed_by_email: "adm@x",
+        operation_by_email: "mgr@x",
+      },
+    ]);
+    const by = Object.fromEntries(r.map((x) => [x.email, x]));
+    expect(by["cc@x"]).toMatchObject({ brought: 1, booked: 1, operations: 0 });
+    expect(by["adm@x"]!.confirmed).toBe(1);
+    expect(by["mgr@x"]!.operations).toBe(1);
   });
 });
