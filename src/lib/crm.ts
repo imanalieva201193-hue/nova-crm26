@@ -13,27 +13,74 @@ export type FunnelCode = "rinos" | "nova_general" | "nova_check" | "nova_surgery
 export const REANIMATION = 9;
 export const FINAL = 10;
 
-export const FUNNELS: Record<FunnelCode, { name: string; stages: Record<number, string>; final: string; surgery: boolean }> = {
+export const FUNNELS: Record<
+  FunnelCode,
+  { name: string; stages: Record<number, string>; final: string; surgery: boolean }
+> = {
   rinos: {
-    name: "Rinos — хирургия", surgery: true, final: "Операция состоялась",
-    stages: { 1: "Привлечение лида", 2: "Обработка обращения", 3: "Запись на консультацию", 4: "Подтверждение и явка", 5: "Консультация хирурга", 6: "Продажа операции, предоплата", 7: "Подготовка к операции", 8: "Операция" },
+    name: "Rinos — хирургия",
+    surgery: true,
+    final: "Операция состоялась",
+    stages: {
+      1: "Привлечение лида",
+      2: "Обработка обращения",
+      3: "Запись на консультацию",
+      4: "Подтверждение и явка",
+      5: "Консультация хирурга",
+      6: "Продажа операции, предоплата",
+      7: "Подготовка к операции",
+      8: "Операция",
+    },
   },
   nova_general: {
-    name: "Nova — общий профиль", surgery: false, final: "Пришёл к врачу",
-    stages: { 1: "Привлечение лида", 2: "Обработка обращения", 3: "Запись к профильному врачу", 4: "Подтверждение и явка", 5: "Консультация врача", 6: "Направление к хирургу" },
+    name: "Nova — общий профиль",
+    surgery: false,
+    final: "Пришёл к врачу",
+    stages: {
+      1: "Привлечение лида",
+      2: "Обработка обращения",
+      3: "Запись к профильному врачу",
+      4: "Подтверждение и явка",
+      5: "Консультация врача",
+      6: "Направление к хирургу",
+    },
   },
   nova_check: {
-    name: "Nova Check", surgery: false, final: "Чекап пройден",
-    stages: { 1: "Привлечение лида", 2: "Обработка обращения", 3: "Заявка и предоплата", 4: "Подготовка и встреча", 5: "Обследование (3 дня)", 6: "Контроль и паспорт здоровья", 7: "Повторные визиты" },
+    name: "Nova Check",
+    surgery: false,
+    final: "Чекап пройден",
+    stages: {
+      1: "Привлечение лида",
+      2: "Обработка обращения",
+      3: "Заявка и предоплата",
+      4: "Подготовка и встреча",
+      5: "Обследование (3 дня)",
+      6: "Контроль и паспорт здоровья",
+      7: "Повторные визиты",
+    },
   },
   nova_surgery: {
-    name: "Nova — хирургия", surgery: true, final: "Операция состоялась",
-    stages: { 1: "Привлечение лида", 2: "Обработка обращения", 3: "Запись на консультацию", 4: "Подтверждение и явка", 5: "Консультация хирурга", 6: "Продажа операции, предоплата", 7: "Подготовка к операции", 8: "Операция" },
+    name: "Nova — хирургия",
+    surgery: true,
+    final: "Операция состоялась",
+    stages: {
+      1: "Привлечение лида",
+      2: "Обработка обращения",
+      3: "Запись на консультацию",
+      4: "Подтверждение и явка",
+      5: "Консультация хирурга",
+      6: "Продажа операции, предоплата",
+      7: "Подготовка к операции",
+      8: "Операция",
+    },
   },
 };
 
 export const BRANCH_FUNNELS: Record<string, FunnelCode[]> = {
-  asanbay: ["rinos"], moskovskaya: ["nova_general"], abd2: ["nova_general", "nova_check"], abd3: ["nova_surgery"],
+  asanbay: ["rinos"],
+  moskovskaya: ["nova_general"],
+  abd2: ["nova_general", "nova_check"],
+  abd3: ["nova_surgery"],
 };
 
 export function stageList(f: FunnelCode): { n: number; label: string }[] {
@@ -45,7 +92,9 @@ export function stageList(f: FunnelCode): { n: number; label: string }[] {
   ];
 }
 export const stageLabel = (f: string, n: number) =>
-  stageList((f as FunnelCode) in FUNNELS ? (f as FunnelCode) : "nova_general").find((s) => s.n === n)?.label ?? `Этап ${n}`;
+  stageList((f as FunnelCode) in FUNNELS ? (f as FunnelCode) : "nova_general").find(
+    (s) => s.n === n,
+  )?.label ?? `Этап ${n}`;
 
 export const LINES = ["Колл-центр", "Direct", "Филиал", "Агентская программа"];
 export const CHANNELS = ["Звонок", "WhatsApp", "Instagram", "Telegram", "Визит"];
@@ -62,7 +111,14 @@ export const ROLES: Record<string, string> = {
   branch_admin: "Администратор филиала / кассир",
   reanimator: "Реаниматор базы",
 };
-export const ALL_BRANCH_ROLES = ["commercial_director", "rop", "senior_cc", "operator", "agent_manager", "reanimator"];
+export const ALL_BRANCH_ROLES = [
+  "commercial_director",
+  "rop",
+  "senior_cc",
+  "operator",
+  "agent_manager",
+  "reanimator",
+];
 
 /** +996XXXXXXXXX from 0555…, 555…, 996555…, with spaces/dashes. Returns null if impossible. */
 export function normalizePhone(input: string): string | null {
@@ -75,10 +131,21 @@ export function normalizePhone(input: string): string | null {
 }
 
 export type LeadLike = {
-  stage: number; outcome?: string | null; interest?: boolean | null; funnel: string;
-  phone?: string | null; lead_date?: string | null; source?: string | null; branch_code?: string | null; line?: string | null;
-  doctor_id?: string | null; visit_date?: string | null; operation_date?: string | null; operation_cost?: number | null;
-  prepayment?: number | null; prepayment_date?: string | null;
+  stage: number;
+  outcome?: string | null;
+  interest?: boolean | null;
+  funnel: string;
+  phone?: string | null;
+  lead_date?: string | null;
+  source?: string | null;
+  branch_code?: string | null;
+  line?: string | null;
+  doctor_id?: string | null;
+  visit_date?: string | null;
+  operation_date?: string | null;
+  operation_cost?: number | null;
+  prepayment?: number | null;
+  prepayment_date?: string | null;
 };
 
 export function leadCategory(l: LeadLike): string {
@@ -123,7 +190,15 @@ export const FOREIGNER_MARKUP = 0.1;
 export const INSTALLMENT_MAX = 250000;
 export const INSTALLMENT_GUARANTOR_FROM = 300000;
 
-export type EstimateItem = { name: string; qty: number; price: number; currency: string; price_from?: boolean; discount?: number; is_package?: boolean };
+export type EstimateItem = {
+  name: string;
+  qty: number;
+  price: number;
+  currency: string;
+  price_from?: boolean;
+  discount?: number;
+  is_package?: boolean;
+};
 
 export function estimateTotals(items: EstimateItem[], foreigner: boolean) {
   const tot = { KGS: 0, USD: 0 };
@@ -150,15 +225,22 @@ export function totalsText(t: { kgs: number; usd: number; from: boolean }) {
 }
 
 export function patientText(items: EstimateItem[], foreigner: boolean, branch?: string) {
-  const lines = items.map((i) => `• ${i.name}${i.qty > 1 ? ` × ${i.qty}` : ""} — ${i.price_from ? "от " : ""}${fmtMoney(i.price * i.qty, i.currency)}`);
+  const lines = items.map(
+    (i) =>
+      `• ${i.name}${i.qty > 1 ? ` × ${i.qty}` : ""} — ${i.price_from ? "от " : ""}${fmtMoney(i.price * i.qty, i.currency)}`,
+  );
   const t = estimateTotals(items, foreigner);
   return [
-    "Здравствуйте! Расчёт стоимости в Nova Clinic" + (branch ? ` (${branchName(branch)})` : "") + ":",
+    "Здравствуйте! Расчёт стоимости в Nova Clinic" +
+      (branch ? ` (${branchName(branch)})` : "") +
+      ":",
     ...lines,
     foreigner ? "Для иностранных пациентов +10%." : "",
     `Итого: ${totalsText(t)}`,
     t.from ? "Точную стоимость врач подтвердит на консультации." : "",
-  ].filter(Boolean).join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /** Bishkek-local date as YYYY-MM-DD */
@@ -180,39 +262,57 @@ export function doctorWorksOn(schedule: string | null | undefined, dateISO: stri
   const day = new Date(dateISO.slice(0, 10) + "T12:00:00Z").getUTCDay();
   const order = [1, 2, 3, 4, 5, 6, 0];
   for (const m of s.matchAll(/(Пн|Вт|Ср|Чт|Пт|Сб|Вс)\s*[–-]\s*(Пн|Вт|Ср|Чт|Пт|Сб|Вс)/g)) {
-    const a = order.indexOf(DAYS.indexOf(m[1] ?? "")), b = order.indexOf(DAYS.indexOf(m[2] ?? ""));
+    const a = order.indexOf(DAYS.indexOf(m[1] ?? "")),
+      b = order.indexOf(DAYS.indexOf(m[2] ?? ""));
     const i = order.indexOf(day);
     if (i >= a && i <= b) return true;
   }
-  return new RegExp(DAYS[day] ?? "").test(s.replace(/(Пн|Вт|Ср|Чт|Пт|Сб|Вс)\s*[–-]\s*(Пн|Вт|Ср|Чт|Пт|Сб|Вс)/g, ""));
+  return new RegExp(DAYS[day] ?? "").test(
+    s.replace(/(Пн|Вт|Ср|Чт|Пт|Сб|Вс)\s*[–-]\s*(Пн|Вт|Ср|Чт|Пт|Сб|Вс)/g, ""),
+  );
 }
 
 /** 3 no-answer touches within the last 3 days → suggest closing as lost */
-export function shouldSuggestLost(touches: { touched_at: string; no_answer: boolean }[], now = new Date()): boolean {
+export function shouldSuggestLost(
+  touches: { touched_at: string; no_answer: boolean }[],
+  now = new Date(),
+): boolean {
   const since = now.getTime() - 3 * 86400_000;
-  return touches.filter((t) => t.no_answer && new Date(t.touched_at).getTime() >= since).length >= 3;
+  return (
+    touches.filter((t) => t.no_answer && new Date(t.touched_at).getTime() >= since).length >= 3
+  );
 }
 
 export function parseCSV(text: string): Record<string, string>[] {
   const rows: string[][] = [];
-  let row: string[] = [], cur = "", q = false;
+  let row: string[] = [],
+    cur = "",
+    q = false;
   const t = text.replace(/^\uFEFF/, "");
   const first = t.split("\n")[0] ?? "";
   const delim = (first.match(/;/g)?.length ?? 0) > (first.match(/,/g)?.length ?? 0) ? ";" : ",";
   for (let i = 0; i < t.length; i++) {
     const c = t[i];
     if (q) {
-      if (c === '"' && t[i + 1] === '"') { cur += '"'; i++; }
-      else if (c === '"') q = false;
+      if (c === '"' && t[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else if (c === '"') q = false;
       else cur += c;
     } else if (c === '"') q = true;
-    else if (c === delim) { row.push(cur); cur = ""; }
-    else if (c === "\n" || c === "\r") {
+    else if (c === delim) {
+      row.push(cur);
+      cur = "";
+    } else if (c === "\n" || c === "\r") {
       if (c === "\r" && t[i + 1] === "\n") i++;
-      row.push(cur); cur = ""; if (row.some((x) => x !== "")) rows.push(row); row = [];
+      row.push(cur);
+      cur = "";
+      if (row.some((x) => x !== "")) rows.push(row);
+      row = [];
     } else cur += c;
   }
-  row.push(cur); if (row.some((x) => x !== "")) rows.push(row);
+  row.push(cur);
+  if (row.some((x) => x !== "")) rows.push(row);
   const [head, ...body] = rows;
   if (!head) return [];
   const h = head.map((x) => x.trim());
@@ -222,6 +322,11 @@ export function parseCSV(text: string): Record<string, string>[] {
 export function toCSV(rows: Record<string, unknown>[]): string {
   if (!rows.length) return "";
   const keys = Object.keys(rows[0] ?? {});
-  const esc = (v: unknown) => { const s = v == null ? "" : String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  return "\uFEFF" + [keys.join(";"), ...rows.map((r) => keys.map((k) => esc(r[k])).join(";"))].join("\n");
+  const esc = (v: unknown) => {
+    const s = v == null ? "" : String(v);
+    return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return (
+    "\uFEFF" + [keys.join(";"), ...rows.map((r) => keys.map((k) => esc(r[k])).join(";"))].join("\n")
+  );
 }

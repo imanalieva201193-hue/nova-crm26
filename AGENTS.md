@@ -28,3 +28,8 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+- Sales business rules live as pure functions in `src/lib/crm.ts` with tests in `src/lib/crm.test.ts`; UI calls them instead of re-implementing. Why: rules must stay testable.
+- Access is by the `employees` allow-list (email → role + branches) enforced with RLS helper functions (`is_staff`, `is_admin`, `can_see_branch`). Why: Google sign-in alone must not grant access.
+- Signed-in pages live under `src/routes/_authenticated/`; the shell there provides `useCrm()` (current employee, selected branch, lead card opener). Why: one place for branch filter and lead sheet.
