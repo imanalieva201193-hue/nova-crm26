@@ -13,11 +13,14 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedCheckupRouteImport } from './routes/_authenticated/checkup'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedFunnelRouteImport } from './routes/_authenticated/funnel'
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
 import { Route as AuthenticatedPartnersRouteImport } from './routes/_authenticated/partners'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedSalesRouteImport } from './routes/_authenticated/sales'
+import { Route as AuthenticatedSurgeryRouteImport } from './routes/_authenticated/surgery'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 
 const IndexRoute = IndexRouteImport.update({
@@ -37,6 +40,16 @@ const AuthRoute = AuthRouteImport.update({
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCheckupRoute = AuthenticatedCheckupRouteImport.update({
+  id: '/checkup',
+  path: '/checkup',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFunnelRoute = AuthenticatedFunnelRouteImport.update({
@@ -64,6 +77,11 @@ const AuthenticatedSalesRoute = AuthenticatedSalesRouteImport.update({
   path: '/sales',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSurgeryRoute = AuthenticatedSurgeryRouteImport.update({
+  id: '/surgery',
+  path: '/surgery',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTasksRoute = AuthenticatedTasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
@@ -74,22 +92,28 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/checkup': typeof AuthenticatedCheckupRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/funnel': typeof AuthenticatedFunnelRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/partners': typeof AuthenticatedPartnersRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/sales': typeof AuthenticatedSalesRoute
+  '/surgery': typeof AuthenticatedSurgeryRoute
   '/tasks': typeof AuthenticatedTasksRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
+  '/checkup': typeof AuthenticatedCheckupRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
   '/funnel': typeof AuthenticatedFunnelRoute
   '/leads': typeof AuthenticatedLeadsRoute
   '/partners': typeof AuthenticatedPartnersRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/sales': typeof AuthenticatedSalesRoute
+  '/surgery': typeof AuthenticatedSurgeryRoute
   '/tasks': typeof AuthenticatedTasksRoute
 }
 export interface FileRoutesById {
@@ -98,11 +122,14 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/checkup': typeof AuthenticatedCheckupRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/funnel': typeof AuthenticatedFunnelRoute
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
   '/_authenticated/partners': typeof AuthenticatedPartnersRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/sales': typeof AuthenticatedSalesRoute
+  '/_authenticated/surgery': typeof AuthenticatedSurgeryRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
 }
 export interface FileRouteTypes {
@@ -111,22 +138,28 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/admin'
+    | '/checkup'
+    | '/dashboard'
     | '/funnel'
     | '/leads'
     | '/partners'
     | '/reports'
     | '/sales'
+    | '/surgery'
     | '/tasks'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/admin'
+    | '/checkup'
+    | '/dashboard'
     | '/funnel'
     | '/leads'
     | '/partners'
     | '/reports'
     | '/sales'
+    | '/surgery'
     | '/tasks'
   id:
     | '__root__'
@@ -134,11 +167,14 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/admin'
+    | '/_authenticated/checkup'
+    | '/_authenticated/dashboard'
     | '/_authenticated/funnel'
     | '/_authenticated/leads'
     | '/_authenticated/partners'
     | '/_authenticated/reports'
     | '/_authenticated/sales'
+    | '/_authenticated/surgery'
     | '/_authenticated/tasks'
   fileRoutesById: FileRoutesById
 }
@@ -178,6 +214,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/checkup': {
+      id: '/_authenticated/checkup'
+      path: '/checkup'
+      fullPath: '/checkup'
+      preLoaderRoute: typeof AuthenticatedCheckupRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/funnel': {
       id: '/_authenticated/funnel'
       path: '/funnel'
@@ -213,6 +263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSalesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/surgery': {
+      id: '/_authenticated/surgery'
+      path: '/surgery'
+      fullPath: '/surgery'
+      preLoaderRoute: typeof AuthenticatedSurgeryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tasks': {
       id: '/_authenticated/tasks'
       path: '/tasks'
@@ -225,21 +282,27 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedCheckupRoute: typeof AuthenticatedCheckupRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFunnelRoute: typeof AuthenticatedFunnelRoute
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
   AuthenticatedPartnersRoute: typeof AuthenticatedPartnersRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedSalesRoute: typeof AuthenticatedSalesRoute
+  AuthenticatedSurgeryRoute: typeof AuthenticatedSurgeryRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedCheckupRoute: AuthenticatedCheckupRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFunnelRoute: AuthenticatedFunnelRoute,
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
   AuthenticatedPartnersRoute: AuthenticatedPartnersRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedSalesRoute: AuthenticatedSalesRoute,
+  AuthenticatedSurgeryRoute: AuthenticatedSurgeryRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
 }
 

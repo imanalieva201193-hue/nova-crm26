@@ -20,10 +20,10 @@ import { Download } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/leads")({
   head: () => ({
     meta: [
-      { title: "Заявки — Nova CRM" },
-      { name: "description", content: "Таблица заявок с поиском, фильтрами и выгрузкой." },
-      { property: "og:title", content: "Заявки — Nova CRM" },
-      { property: "og:description", content: "Таблица заявок с поиском, фильтрами и выгрузкой." },
+      { title: "Пациенты — Nova CRM" },
+      { name: "description", content: "База пациентов с поиском, фильтрами и выгрузкой." },
+      { property: "og:title", content: "Пациенты — Nova CRM" },
+      { property: "og:description", content: "База пациентов с поиском, фильтрами и выгрузкой." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -91,7 +91,7 @@ function LeadsPage() {
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <h1 className="mr-2 font-display text-xl font-bold">
-          Заявки <span className="text-sm text-muted-foreground">{rows.length}</span>
+          Пациенты <span className="text-sm text-muted-foreground">{rows.length}</span>
         </h1>
         <Input
           className="w-64"
@@ -172,7 +172,7 @@ function LeadsPage() {
             {!rows.length && (
               <tr>
                 <td colSpan={9} className="px-3 py-10 text-center text-muted-foreground">
-                  Заявок нет. Нажмите «+ Заявка» вверху.
+                  Пациентов нет. Нажмите «Новая заявка» в меню слева.
                 </td>
               </tr>
             )}

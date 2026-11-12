@@ -163,3 +163,91 @@ describe("surgery report", () => {
     });
   });
 });
+
+import {
+  prevRange,
+  dashStats,
+  funnelSteps,
+  checkupFunnelSteps,
+  checkupStats,
+} from "./crm";
+describe("dashboard", () => {
+  it("week range is Monday–Sunday; prevRange shifts one period back", () => {
+    expect(periodRange("week", "2026-11-12")).toEqual({ from: "2026-11-09", to: "2026-11-15" });
+    expect(prevRange("week", "2026-11-12")).toEqual({ from: "2026-11-02", to: "2026-11-08" });
+    expect(prevRange("day", "2026-11-01")).toEqual({ from: "2026-10-31", to: "2026-10-31" });
+    expect(prevRange("month", "2026-11-12")).toEqual({ from: "2026-10-01", to: "2026-10-31" });
+  });
+  const D = (id: string, o: Record<string, unknown>) => ({
+    ...base,
+    id,
+    ...o,
+  });
+  const leads = [
+    D("a", { stage: 3, visit_date: "2026-11-13", came: true }), // booked + came
+    D("b", { stage: 6, came: true, visit_date: "2026-11-10" }), // booked op
+    D("c", { stage: FINAL, came: true, operation_cost: 50000 }), // done op
+    D("d", { outcome: "Не пришёл", stage: 3 }),
+    D("e", { outcome: "Потерянный" }),
+    D("f", { outcome: "Мусорный" }),
+    D("g", {}), // just a lead
+  ];
+  it("dashStats: bookings, visits, operations, conversions", () => {
+    const s = dashStats(leads);
+    expect(s).toMatchObject({
+      leads: 7,
+      trash: 1,
+      bookedConsult: 4,
+      cameConsult: 3,
+      noShow: 1,
+      bookedOp: 2,
+      doneOp: 1,
+      refusals: 1,
+      convLeadConsult: 50, // 3 / 6 non-trash
+      convConsultOp: 66.7, // 2 / 3 came
+    });
+  });
+  it("funnel steps with conversion to previous step", () => {
+    const steps = funnelSteps(leads);
+    expect(steps.map((s) => s.count)).toEqual([6, 4, 3, 2, 1]);
+    expect(steps.map((s) => s.conv)).toEqual([100, 66.7, 75, 66.7, 50]);
+  });
+});
+
+describe("checkup", () => {
+  const C = (id: string, o: Record<string, unknown>) => ({
+    ...base,
+    id,
+    funnel: "nova_check",
+    branch_code: "abd2",
+    ...o,
+  });
+  const leads = [
+    C("a", { stage: 3, prepayment: 5000, confirmed: true, visit_date: "2026-11-13" }),
+    C("b", { stage: FINAL, came: true, confirmed: true }),
+    C("c", { outcome: "Не пришёл", stage: 3, prepayment: 5000 }),
+    C("d", { outcome: "Потерянный" }),
+    C("e", { stage: 2 }),
+    C("f", { stage: 7, parent_lead_id: "b", came: true }),
+  ];
+  it("checkupStats: all KPIs from the spec", () => {
+    const s = checkupStats(leads, { b: 20000 });
+    expect(s).toMatchObject({
+      leads: 6,
+      booked: 4,
+      confirmed: 2,
+      came: 2,
+      done: 1,
+      cancelled: 1,
+      noShow: 1,
+      inWork: 3, // a (записан, ещё не пришёл), e (этап 2), f (повторные визиты)
+      repeat: 1,
+      revenue: 20000,
+    });
+  });
+  it("checkup funnel: Лиды → Записались → Пришли → Завершили", () => {
+    const steps = checkupFunnelSteps(leads);
+    expect(steps.map((s) => s.count)).toEqual([6, 4, 2, 1]);
+    expect(steps.map((s) => s.conv)).toEqual([100, 66.7, 50, 50]);
+  });
+});

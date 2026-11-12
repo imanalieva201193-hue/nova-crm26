@@ -12,10 +12,10 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/_authenticated/partners")({
   head: () => ({
     meta: [
-      { title: "Партнёры — Nova CRM" },
-      { name: "description", content: "Агентская программа: партнёры, пациенты и бонусы." },
-      { property: "og:title", content: "Партнёры — Nova CRM" },
-      { property: "og:description", content: "Агентская программа: партнёры, пациенты и бонусы." },
+      { title: "Агенты — Nova CRM" },
+      { name: "description", content: "Агентская программа: агенты, пациенты и бонусы." },
+      { property: "og:title", content: "Агенты — Nova CRM" },
+      { property: "og:description", content: "Агентская программа: агенты, пациенты и бонусы." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -60,7 +60,7 @@ function PartnersPage() {
   }
   return (
     <div>
-      <h1 className="mb-4 font-display text-xl font-bold">Партнёры — агентская программа</h1>
+      <h1 className="mb-4 font-display text-xl font-bold">Агенты — агентская программа</h1>
       {isAdmin && (
         <div className="mb-4 flex flex-wrap gap-2 rounded-xl border bg-card p-3">
           {(["name", "type", "specialty", "clinic", "city", "bonus"] as const).map((k) => (
@@ -87,6 +87,8 @@ function PartnersPage() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {partners.map((p) => {
           const pl = leads.filter((l) => l.partner_id === p.id);
+          const booked = pl.filter((l) => l.stage >= 3 || l.visit_date).length;
+          const came = pl.filter((l) => l.came).length;
           const ops = pl.filter((l) => l.stage === FINAL && l.operation_date).length;
           return (
             <div key={p.id} className="rounded-xl border bg-card p-4">
@@ -94,9 +96,15 @@ function PartnersPage() {
               <div className="text-xs text-muted-foreground">
                 {[p.type, p.specialty, p.clinic, p.city].filter(Boolean).join(" · ")}
               </div>
-              <div className="mt-3 grid grid-cols-3 text-center text-sm">
+              <div className="mt-3 grid grid-cols-5 text-center text-sm">
                 <div>
-                  <div className="text-lg font-bold">{pl.length}</div>пациентов
+                  <div className="text-lg font-bold">{pl.length}</div>направлено
+                </div>
+                <div>
+                  <div className="text-lg font-bold">{booked}</div>записались
+                </div>
+                <div>
+                  <div className="text-lg font-bold">{came}</div>пришли
                 </div>
                 <div>
                   <div className="text-lg font-bold">{ops}</div>операций
@@ -111,7 +119,7 @@ function PartnersPage() {
             </div>
           );
         })}
-        {!partners.length && <p className="text-sm text-muted-foreground">Партнёров пока нет.</p>}
+        {!partners.length && <p className="text-sm text-muted-foreground">Агентов пока нет.</p>}
       </div>
     </div>
   );

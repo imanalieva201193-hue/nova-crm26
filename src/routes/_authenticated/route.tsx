@@ -16,9 +16,9 @@ import {
 import {
   Plus,
   LogOut,
-  Kanban,
-  List,
-  CheckSquare,
+  LayoutDashboard,
+  Users,
+  ClipboardCheck,
   Stethoscope,
   Handshake,
   Settings,
@@ -35,11 +35,11 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 const NAV = [
-  { to: "/funnel", label: "Воронка", icon: Kanban },
-  { to: "/leads", label: "Заявки", icon: List },
-  { to: "/tasks", label: "Задачи", icon: CheckSquare },
-  { to: "/sales", label: "Отдел продаж", icon: Stethoscope },
-  { to: "/partners", label: "Партнёры", icon: Handshake },
+  { to: "/dashboard", label: "Главная", icon: LayoutDashboard },
+  { to: "/leads", label: "Пациенты", icon: Users },
+  { to: "/surgery", label: "Хирургия", icon: Stethoscope },
+  { to: "/checkup", label: "Чекап — 2 этаж", icon: ClipboardCheck },
+  { to: "/partners", label: "Агенты", icon: Handshake },
   { to: "/reports", label: "Отчёты", icon: BarChart3 },
 ] as const;
 
@@ -130,7 +130,7 @@ function Shell() {
       <div className="min-h-screen bg-background md:flex">
         <aside className="z-30 flex shrink-0 flex-col bg-sidebar text-sidebar-foreground md:sticky md:top-0 md:h-screen md:w-64">
           <div className="px-5 pt-6 pb-4">
-            <Link to="/funnel" className="block font-display text-lg font-bold leading-tight">
+            <Link to="/dashboard" className="block font-display text-lg font-bold leading-tight">
               Nova CRM
             </Link>
             <div className="text-xs text-sidebar-foreground/60">{ROLES[emp.role]}</div>
@@ -180,7 +180,7 @@ function Shell() {
                 activeProps={{ className: "bg-sidebar-accent !text-sidebar-primary font-medium" }}
               >
                 <Settings className="size-4" />
-                Админка
+                Сотрудники
               </Link>
             )}
           </nav>

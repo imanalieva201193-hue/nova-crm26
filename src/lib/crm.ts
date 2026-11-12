@@ -332,27 +332,44 @@ export function toCSV(rows: Record<string, unknown>[]): string {
 }
 
 // ---------- Reports ----------
-export type PeriodKind = "day" | "month" | "year";
+export type PeriodKind = "day" | "week" | "month" | "year";
 export const PERIOD_LABEL: Record<PeriodKind, string> = {
   day: "День",
+  week: "Неделя",
   month: "Месяц",
   year: "Год",
 };
 
-/** Inclusive YYYY-MM-DD range of the day/month/year containing `date`. */
+const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
+
+/** Inclusive YYYY-MM-DD range of the day/week(Mo–Su)/month/year containing `date`. */
 export function periodRange(kind: PeriodKind, date: string): { from: string; to: string } {
   const [y = 1970, m = 1] = date.split("-").map(Number);
   if (kind === "day") return { from: date, to: date };
   if (kind === "year") return { from: `${y}-01-01`, to: `${y}-12-31` };
+  if (kind === "week") {
+    const t = Date.parse(date + "T00:00:00Z");
+    const dow = (new Date(t).getUTCDay() + 6) % 7; // Monday = 0
+    return { from: iso(t - dow * 86400_000), to: iso(t + (6 - dow) * 86400_000) };
+  }
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
   const mm = String(m).padStart(2, "0");
   return { from: `${y}-${mm}-01`, to: `${y}-${mm}-${String(last).padStart(2, "0")}` };
+}
+
+/** The same-length period immediately before the one containing `date`. */
+export function prevRange(kind: PeriodKind, date: string): { from: string; to: string } {
+  const { from } = periodRange(kind, date);
+  const t = Date.parse(from + "T00:00:00Z") - 86400_000;
+  return periodRange(kind, iso(t));
 }
 
 export type ReportLead = LeadLike & {
   id: string;
   responsible_email?: string | null;
   came?: boolean | null;
+  confirmed?: boolean | null;
+  parent_lead_id?: string | null;
 };
 export type Group = { key: string; leads: number; won: number; revenue: number; conv: number };
 export type ReportStats = {
@@ -561,4 +578,119 @@ export function surgeonReport(leads: SurgeryLead[]): SurgeonRow[] {
       };
     })
     .sort((a, b) => b.bookedConsult - a.bookedConsult);
+}
+
+/* ---------- Dashboard (Главная) ---------- */
+
+const isSurgery = (l: LeadLike) => FUNNELS[l.funnel as FunnelCode]?.surgery === true;
+const active = (l: LeadLike) => l.stage !== REANIMATION;
+/** Booked for a consultation: reached the booking stage or has a visit date. */
+const bookedConsult = (l: LeadLike) => (l.stage >= 3 && active(l)) || !!l.visit_date;
+/** Booked for an operation: surgery funnel at the sale stage or beyond. */
+const bookedOp = (l: LeadLike) => isSurgery(l) && l.stage >= 6 && active(l);
+
+export type DashStats = {
+  leads: number;
+  trash: number;
+  bookedConsult: number;
+  cameConsult: number;
+  noShow: number;
+  bookedOp: number;
+  doneOp: number;
+  refusals: number;
+  convLeadConsult: number; // cameConsult / non-trash leads, %
+  convConsultOp: number; // bookedOp / cameConsult, %
+};
+
+/** Main dashboard numbers for a period (leads already filtered by range/branch/etc). */
+export function dashStats(leads: ReportLead[]): DashStats {
+  const trash = leads.filter((l) => l.outcome === "Мусорный").length;
+  const came = leads.filter((l) => l.came).length;
+  const op = leads.filter(bookedOp).length;
+  return {
+    leads: leads.length,
+    trash,
+    bookedConsult: leads.filter(bookedConsult).length,
+    cameConsult: came,
+    noShow: leads.filter((l) => l.outcome === "Не пришёл").length,
+    bookedOp: op,
+    doneOp: leads.filter((l) => isSurgery(l) && l.stage === FINAL).length,
+    refusals: leads.filter((l) => l.outcome === "Потерянный").length,
+    convLeadConsult: pct(came, leads.length - trash),
+    convConsultOp: pct(op, came),
+  };
+}
+
+export type FunnelStep = { key: string; label: string; count: number; conv: number };
+
+/** Лиды → Записались → Пришли → Записались на операцию → Проведено операций. */
+export function funnelSteps(leads: ReportLead[]): FunnelStep[] {
+  const counts = [
+    leads.filter((l) => l.outcome !== "Мусорный").length,
+    leads.filter((l) => l.outcome !== "Мусорный" && bookedConsult(l)).length,
+    leads.filter((l) => l.came).length,
+    leads.filter(bookedOp).length,
+    leads.filter((l) => isSurgery(l) && l.stage === FINAL).length,
+  ];
+  const labels = [
+    "Лиды",
+    "Записались",
+    "Пришли на консультацию",
+    "Записались на операцию",
+    "Проведено операций",
+  ];
+  return labels.map((label, i) => ({
+    key: label,
+    label,
+    count: counts[i] ?? 0,
+    conv: i === 0 ? 100 : pct(counts[i] ?? 0, counts[i - 1] ?? 0),
+  }));
+}
+
+/** Checkup funnel: Лиды → Записались → Пришли → Завершили чекап. */
+export function checkupFunnelSteps(leads: ReportLead[]): FunnelStep[] {
+  const counts = [
+    leads.filter((l) => l.outcome !== "Мусорный").length,
+    leads.filter((l) => l.outcome !== "Мусорный" && bookedConsult(l)).length,
+    leads.filter((l) => l.came).length,
+    leads.filter((l) => l.stage === FINAL).length,
+  ];
+  const labels = ["Лиды", "Записались", "Пришли", "Завершили чекап"];
+  return labels.map((label, i) => ({
+    key: label,
+    label,
+    count: counts[i] ?? 0,
+    conv: i === 0 ? 100 : pct(counts[i] ?? 0, counts[i - 1] ?? 0),
+  }));
+}
+
+/* ---------- Checkup (Абдумомунова, 2 этаж) ---------- */
+
+export type CheckupStats = {
+  leads: number;
+  booked: number;
+  confirmed: number;
+  came: number;
+  done: number;
+  cancelled: number;
+  noShow: number;
+  inWork: number;
+  repeat: number;
+  revenue: number;
+};
+
+/** Checkup page numbers; `revenue` maps lead id → KGS (see leadRevenue). */
+export function checkupStats(leads: ReportLead[], revenue: Record<string, number>): CheckupStats {
+  return {
+    leads: leads.length,
+    booked: leads.filter(bookedConsult).length,
+    confirmed: leads.filter((l) => l.confirmed).length,
+    came: leads.filter((l) => l.came).length,
+    done: leads.filter((l) => l.stage === FINAL).length,
+    cancelled: leads.filter((l) => l.outcome === "Потерянный").length,
+    noShow: leads.filter((l) => l.outcome === "Не пришёл").length,
+    inWork: leads.filter((l) => !l.outcome && l.stage !== FINAL && active(l)).length,
+    repeat: leads.filter((l) => l.parent_lead_id).length,
+    revenue: leads.reduce((s, l) => s + (revenue[l.id] ?? 0), 0),
+  };
 }

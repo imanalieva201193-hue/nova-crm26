@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,17 +15,19 @@ import {
   fmtMoney,
   leadRevenue,
   periodRange,
+  prevRange,
   reanimationCandidates,
   reportStats,
   reportText,
+  toCSV,
   type Group,
   type PeriodKind,
+  type ReportStats,
 } from "@/lib/crm";
-import { summarizeReport } from "@/lib/report-ai.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { SurgeryReport } from "@/components/crm/SurgeryReport";
+import { Download } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -34,12 +35,14 @@ export const Route = createFileRoute("/_authenticated/reports")({
       { title: "Отчёты — Nova CRM" },
       {
         name: "description",
-        content: "Сводка продаж за день, месяц и год с AI-анализом и реанимацией базы.",
+        content:
+          "Автоматические отчёты за день, неделю, месяц и год: по отделам, сотрудникам и источникам, со сравнением периодов и выгрузкой в Excel.",
       },
       { property: "og:title", content: "Отчёты — Nova CRM" },
       {
         property: "og:description",
-        content: "Сводка продаж за день, месяц и год с AI-анализом и реанимацией базы.",
+        content:
+          "Автоматические отчёты за день, неделю, месяц и год: по отделам, сотрудникам и источникам, со сравнением периодов и выгрузкой в Excel.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -51,56 +54,31 @@ export const Route = createFileRoute("/_authenticated/reports")({
 const sel = "h-9 rounded-md border border-input bg-card px-2 text-sm";
 
 function ReportsPage() {
-  const [tab, setTab] = useState<"summary" | "surgery">("summary");
   return (
     <div className="space-y-6">
       <div>
         <div className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
-          Аналитика продаж
+          Автоматические отчёты
         </div>
-        <h1 className="font-display text-4xl font-bold">
-          {tab === "summary" ? "Сводка" : "Хирургия 3 этаж"}
-        </h1>
+        <h1 className="font-display text-4xl font-bold">Отчёты</h1>
       </div>
-      <div className="flex w-fit rounded-xl bg-muted p-1">
-        {(
-          [
-            ["summary", "Сводка"],
-            ["surgery", "Хирургия 3 этаж"],
-          ] as const
-        ).map(([k, l]) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            className={`rounded-lg px-4 py-1.5 text-sm ${tab === k ? "bg-card font-semibold text-foreground shadow-sm" : "text-muted-foreground"}`}
-          >
-            {l}
-          </button>
-        ))}
-      </div>
-      {tab === "summary" ? <SummaryReport /> : <SurgeryReport />}
+      <SummaryReport />
     </div>
   );
 }
 
-function SummaryReport() {
-  const { branch, isAdmin } = useCrm();
-  const [kind, setKind] = useState<PeriodKind>("month");
-  const [date, setDate] = useState(bishkekDate());
-  const range = periodRange(kind, date);
-  const title = `${PERIOD_LABEL[kind].toLowerCase()} ${kind === "day" ? fmtDate(date) : kind === "month" ? date.slice(0, 7) : date.slice(0, 4)}${branch !== "all" ? `, ${branchName(branch)}` : ""}`;
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["report", branch, range.from, range.to],
+function useReportData(branch: string, from: string, to: string) {
+  return useQuery({
+    queryKey: ["report", branch, from, to],
     queryFn: async () => {
       const leads: Lead[] = [];
-      for (let from = 0; ; from += 1000) {
+      for (let off = 0; ; off += 1000) {
         let q = supabase
           .from("leads")
           .select("*")
-          .gte("lead_date", range.from)
-          .lte("lead_date", range.to)
-          .range(from, from + 999);
+          .gte("lead_date", from)
+          .lte("lead_date", to)
+          .range(off, off + 999);
         if (branch !== "all") q = q.eq("branch_code", branch);
         const { data, error } = await q;
         if (error) throw error;
@@ -131,31 +109,75 @@ function SummaryReport() {
       return { leads, revenue };
     },
   });
-  const stats = useMemo(() => (data ? reportStats(data.leads, data.revenue) : null), [data]);
-  const text = stats ? reportText(stats, title) : "";
+}
 
-  const summarize = useServerFn(summarizeReport);
-  const [ai, setAi] = useState<{ loading?: boolean; text?: string; error?: string }>({});
-  async function runAi() {
-    setAi({ loading: true });
-    const r = await summarize({ data: { text } }).catch(() => ({
-      ok: false as const,
-      error: "Не удалось получить сводку",
-    }));
-    setAi(r.ok ? { text: r.text } : { error: r.error });
-  }
+function SummaryReport() {
+  const { branch, isAdmin } = useCrm();
+  const [kind, setKind] = useState<PeriodKind>("month");
+  const [date, setDate] = useState(bishkekDate());
+  const range = periodRange(kind, date);
+  const prev = prevRange(kind, date);
+  const periodText =
+    kind === "day"
+      ? fmtDate(date)
+      : kind === "week"
+        ? `${fmtDate(range.from)}–${fmtDate(range.to)}`
+        : kind === "month"
+          ? date.slice(0, 7)
+          : date.slice(0, 4);
+  const title = `${PERIOD_LABEL[kind].toLowerCase()} ${periodText}${branch !== "all" ? `, ${branchName(branch)}` : ""}`;
+
+  const cur = useReportData(branch, range.from, range.to);
+  const prv = useReportData(branch, prev.from, prev.to);
+  const stats = useMemo(
+    () => (cur.data ? reportStats(cur.data.leads, cur.data.revenue) : null),
+    [cur.data],
+  );
+  const prevStats = useMemo(
+    () => (prv.data ? reportStats(prv.data.leads, prv.data.revenue) : null),
+    [prv.data],
+  );
+  const text = stats ? reportText(stats, title) : "";
 
   const employees = useQuery(employeesQ).data ?? [];
   const leaders = employees.filter(
     (e) => e.active && (e.role === "rop" || e.role === "commercial_director"),
   );
-  const fullText = text + (ai.text ? `\n\nAI-сводка:\n${ai.text}` : "");
   const subject = `Отчёт Nova CRM — ${title}`;
+
+  function exportExcel() {
+    if (!stats) return;
+    const rows: Record<string, unknown>[] = [
+      { Раздел: "Итоги", Показатель: "Заявок", Значение: stats.leads },
+      { Раздел: "Итоги", Показатель: "Мусорных", Значение: stats.trash },
+      { Раздел: "Итоги", Показатель: "Продаж (финал)", Значение: stats.won },
+      { Раздел: "Итоги", Показатель: "Пришли", Значение: stats.came },
+      { Раздел: "Итоги", Показатель: "Потеряно", Значение: stats.lost },
+      { Раздел: "Итоги", Показатель: "Не пришли", Значение: stats.noShow },
+      { Раздел: "Итоги", Показатель: "Конверсия, %", Значение: stats.conv },
+      { Раздел: "Итоги", Показатель: "Выручка, сом", Значение: stats.revenue },
+      { Раздел: "Итоги", Показатель: "Средний чек, сом", Значение: stats.avgCheck },
+    ];
+    const add = (name: string, list: Group[]) => {
+      for (const g of list)
+        rows.push({
+          Раздел: name,
+          Показатель: g.key,
+          Значение: `${g.leads} заявок, ${g.won} продаж (${g.conv}%), ${g.revenue} сом`,
+        });
+    };
+    add("По менеджерам", stats.byManager);
+    add("По каналам", stats.byChannel);
+    add("По филиалам", stats.byBranch);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([toCSV(rows)], { type: "text/csv;charset=utf-8" }));
+    a.download = `отчёт_${range.from}_${range.to}.csv`;
+    a.click();
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="mr-auto" />
         <div className="flex rounded-xl bg-muted p-1">
           {(Object.keys(PERIOD_LABEL) as PeriodKind[]).map((k) => (
             <button
@@ -173,26 +195,55 @@ function SummaryReport() {
           value={date}
           onChange={(e) => e.target.value && setDate(e.target.value)}
         />
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          onClick={exportExcel}
+          disabled={!stats}
+        >
+          <Download className="size-4" />
+          Excel / CSV
+        </Button>
       </div>
 
-      {isLoading || !stats ? (
+      {cur.isLoading || !stats ? (
         <p className="text-muted-foreground">Считаю…</p>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Kpi label="Заявок" value={stats.leads} hint={`мусорных ${stats.trash}`} />
-            <Kpi label="Продаж (финал)" value={stats.won} hint={`пришли ${stats.came}`} />
+            <Kpi
+              label="Заявок"
+              value={stats.leads}
+              hint={`мусорных ${stats.trash}`}
+              prev={prevStats?.leads}
+            />
+            <Kpi
+              label="Продаж (финал)"
+              value={stats.won}
+              hint={`пришли ${stats.came}`}
+              prev={prevStats?.won}
+            />
             <Kpi
               label="Конверсия"
               value={`${stats.conv}%`}
               hint={`потеряно ${stats.lost}, не пришли ${stats.noShow}`}
+              prev={prevStats ? `${prevStats.conv}%` : undefined}
             />
             <Kpi
               label="Выручка"
               value={fmtMoney(stats.revenue)}
               hint={`средний чек ${fmtMoney(stats.avgCheck)}`}
+              prev={prevStats ? fmtMoney(prevStats.revenue) : undefined}
             />
           </div>
+          {prevStats && (
+            <p className="text-xs text-muted-foreground">
+              Сравнение с предыдущим периодом ({fmtDate(prev.from)}–{fmtDate(prev.to)}): заявок{" "}
+              {delta(stats.leads - prevStats.leads)}, продаж {delta(stats.won - prevStats.won)},
+              выручка {delta(fmtMoney(stats.revenue - prevStats.revenue))}.
+            </p>
+          )}
 
           <div className="grid gap-4 lg:grid-cols-3">
             <GroupTable title="По менеджерам" rows={stats.byManager} />
@@ -201,47 +252,24 @@ function SummaryReport() {
           </div>
 
           <section className="rounded-xl border bg-card p-4">
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <h2 className="mr-auto font-display text-lg font-bold">AI-анализ за {title}</h2>
-              <Button onClick={runAi} disabled={ai.loading || !stats.leads}>
-                {ai.loading ? "Анализирую…" : ai.text ? "Обновить анализ" : "Сделать анализ"}
-              </Button>
-            </div>
-            {ai.error && <p className="text-sm text-destructive">{ai.error}</p>}
-            {ai.text ? (
-              <p className="whitespace-pre-wrap text-sm">{ai.text}</p>
-            ) : (
-              !ai.error && (
-                <p className="text-sm text-muted-foreground">
-                  {stats.leads
-                    ? "Нажмите «Сделать анализ» — AI разберёт цифры и подскажет, что делать."
-                    : "За этот период заявок нет."}
-                </p>
-              )
-            )}
-          </section>
-
-          <section className="rounded-xl border bg-card p-4">
             <h2 className="mb-1 font-display text-lg font-bold">Рассылка руководителям</h2>
             <p className="mb-3 text-sm text-muted-foreground">
-              Отчёт {ai.text ? "с AI-сводкой " : ""}для:{" "}
+              Отчёт для:{" "}
               {leaders.map((l) => l.full_name || l.email).join(", ") ||
-                "РОП и коммерческий директор не добавлены в Админке"}
+                "РОП и коммерческий директор не добавлены в раздел «Сотрудники»"}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 onClick={() =>
-                  navigator.clipboard
-                    .writeText(fullText)
-                    .then(() => toast.success("Отчёт скопирован"))
+                  navigator.clipboard.writeText(text).then(() => toast.success("Отчёт скопирован"))
                 }
               >
                 Скопировать
               </Button>
               <Button variant="outline" asChild>
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(fullText)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(text)}`}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -250,7 +278,7 @@ function SummaryReport() {
               </Button>
               <Button variant="outline" asChild disabled={!leaders.length}>
                 <a
-                  href={`mailto:${leaders.map((l) => l.email).join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(fullText)}`}
+                  href={`mailto:${leaders.map((l) => l.email).join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`}
                 >
                   Письмом
                 </a>
@@ -265,12 +293,27 @@ function SummaryReport() {
   );
 }
 
-function Kpi({ label, value, hint }: { label: string; value: string | number; hint: string }) {
+const delta = (v: number | string) => (typeof v === "number" ? (v > 0 ? `+${v}` : `${v}`) : v);
+
+function Kpi({
+  label,
+  value,
+  hint,
+  prev,
+}: {
+  label: string;
+  value: string | number;
+  hint: string;
+  prev?: string | number | undefined;
+}) {
   return (
     <div className="rounded-xl border bg-card p-4">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="font-display text-2xl font-bold">{value}</div>
       <div className="text-xs text-muted-foreground">{hint}</div>
+      {prev !== undefined && (
+        <div className="text-xs text-muted-foreground">прошлый период: {prev}</div>
+      )}
     </div>
   );
 }
