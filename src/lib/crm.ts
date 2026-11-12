@@ -126,7 +126,7 @@ export const INSTALLMENT_GUARANTOR_FROM = 300000;
 export type EstimateItem = { name: string; qty: number; price: number; currency: string; price_from?: boolean; discount?: number; is_package?: boolean };
 
 export function estimateTotals(items: EstimateItem[], foreigner: boolean) {
-  const tot: Record<string, number> = { KGS: 0, USD: 0 };
+  const tot = { KGS: 0, USD: 0 };
   let from = false;
   for (const i of items) {
     const disc = i.is_package ? 0 : Math.min(Math.max(i.discount ?? 0, 0), 100);
@@ -180,11 +180,11 @@ export function doctorWorksOn(schedule: string | null | undefined, dateISO: stri
   const day = new Date(dateISO.slice(0, 10) + "T12:00:00Z").getUTCDay();
   const order = [1, 2, 3, 4, 5, 6, 0];
   for (const m of s.matchAll(/(Пн|Вт|Ср|Чт|Пт|Сб|Вс)\s*[–-]\s*(Пн|Вт|Ср|Чт|Пт|Сб|Вс)/g)) {
-    const a = order.indexOf(DAYS.indexOf(m[1])), b = order.indexOf(DAYS.indexOf(m[2]));
+    const a = order.indexOf(DAYS.indexOf(m[1] ?? "")), b = order.indexOf(DAYS.indexOf(m[2] ?? ""));
     const i = order.indexOf(day);
     if (i >= a && i <= b) return true;
   }
-  return new RegExp(DAYS[day]).test(s.replace(/(Пн|Вт|Ср|Чт|Пт|Сб|Вс)\s*[–-]\s*(Пн|Вт|Ср|Чт|Пт|Сб|Вс)/g, ""));
+  return new RegExp(DAYS[day] ?? "").test(s.replace(/(Пн|Вт|Ср|Чт|Пт|Сб|Вс)\s*[–-]\s*(Пн|Вт|Ср|Чт|Пт|Сб|Вс)/g, ""));
 }
 
 /** 3 no-answer touches within the last 3 days → suggest closing as lost */
@@ -197,7 +197,8 @@ export function parseCSV(text: string): Record<string, string>[] {
   const rows: string[][] = [];
   let row: string[] = [], cur = "", q = false;
   const t = text.replace(/^\uFEFF/, "");
-  const delim = (t.split("\n")[0].match(/;/g)?.length ?? 0) > (t.split("\n")[0].match(/,/g)?.length ?? 0) ? ";" : ",";
+  const first = t.split("\n")[0] ?? "";
+  const delim = (first.match(/;/g)?.length ?? 0) > (first.match(/,/g)?.length ?? 0) ? ";" : ",";
   for (let i = 0; i < t.length; i++) {
     const c = t[i];
     if (q) {
@@ -220,7 +221,7 @@ export function parseCSV(text: string): Record<string, string>[] {
 
 export function toCSV(rows: Record<string, unknown>[]): string {
   if (!rows.length) return "";
-  const keys = Object.keys(rows[0]);
+  const keys = Object.keys(rows[0] ?? {});
   const esc = (v: unknown) => { const s = v == null ? "" : String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   return "\uFEFF" + [keys.join(";"), ...rows.map((r) => keys.map((k) => esc(r[k])).join(";"))].join("\n");
 }
