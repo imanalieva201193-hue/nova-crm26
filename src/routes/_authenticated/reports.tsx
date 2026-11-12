@@ -121,13 +121,16 @@ function ReportsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto font-display text-xl font-bold">Отчёты</h1>
-        <div className="flex rounded-lg border bg-card p-0.5">
+        <div className="mr-auto">
+          <div className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">Аналитика продаж</div>
+          <h1 className="font-display text-4xl font-bold">Сводка</h1>
+        </div>
+        <div className="flex rounded-xl bg-muted p-1">
           {(Object.keys(PERIOD_LABEL) as PeriodKind[]).map((k) => (
             <button
               key={k}
               onClick={() => setKind(k)}
-              className={`rounded-md px-3 py-1 text-sm ${kind === k ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+              className={`rounded-lg px-4 py-1.5 text-sm ${kind === k ? "bg-card font-semibold text-foreground shadow-sm" : "text-muted-foreground"}`}
             >
               {PERIOD_LABEL[k]}
             </button>

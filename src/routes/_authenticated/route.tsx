@@ -127,14 +127,17 @@ function Shell() {
         },
       }}
     >
-      <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-30 bg-sidebar text-sidebar-foreground">
-          <div className="flex flex-wrap items-center gap-3 px-4 py-2.5">
-            <Link to="/funnel" className="font-display text-lg font-bold text-sidebar-primary">
+      <div className="min-h-screen bg-background md:flex">
+        <aside className="z-30 flex shrink-0 flex-col bg-sidebar text-sidebar-foreground md:sticky md:top-0 md:h-screen md:w-64">
+          <div className="px-5 pt-6 pb-4">
+            <Link to="/funnel" className="block font-display text-lg font-bold leading-tight">
               Nova CRM
             </Link>
+            <div className="text-xs text-sidebar-foreground/60">{ROLES[emp.role]}</div>
+          </div>
+          <div className="space-y-2 px-3 pb-3">
             <Select value={branch} onValueChange={setBranch}>
-              <SelectTrigger className="h-9 w-[210px] border-sidebar-border bg-sidebar-accent text-sidebar-foreground">
+              <SelectTrigger className="h-10 w-full border-sidebar-border bg-sidebar-accent/60 text-sidebar-foreground">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -149,37 +152,22 @@ function Shell() {
               </SelectContent>
             </Select>
             <Button
-              size="sm"
-              className="bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
+              className="w-full bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
               onClick={() => {
                 setLeadId(null);
                 setPreset({});
               }}
             >
-              <Plus className="size-4" /> Заявка
+              <Plus className="size-4" /> Новая заявка
             </Button>
-            <div className="ml-auto flex items-center gap-3 text-xs">
-              <span className="hidden text-sidebar-foreground/70 sm:inline">
-                {emp.full_name || emp.email} · {ROLES[emp.role]}
-              </span>
-              <button
-                onClick={signOut}
-                aria-label="Выйти"
-                className="rounded-md p-1.5 hover:bg-sidebar-accent"
-              >
-                <LogOut className="size-4" />
-              </button>
-            </div>
           </div>
-          <nav className="flex gap-1 overflow-x-auto px-3 pb-2">
+          <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-1 md:flex-col md:overflow-y-auto">
             {NAV.map((n) => (
               <Link
                 key={n.to}
                 to={n.to}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent"
-                activeProps={{
-                  className: "bg-sidebar-accent !text-sidebar-foreground font-medium",
-                }}
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] text-sidebar-foreground/80 hover:bg-sidebar-accent/60 shrink-0"
+                activeProps={{ className: "bg-sidebar-accent !text-sidebar-primary font-medium" }}
               >
                 <n.icon className="size-4" />
                 {n.label}
@@ -188,18 +176,25 @@ function Shell() {
             {isAdmin && (
               <Link
                 to="/admin"
-                className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent"
-                activeProps={{
-                  className: "bg-sidebar-accent !text-sidebar-foreground font-medium",
-                }}
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] text-sidebar-foreground/80 hover:bg-sidebar-accent/60 shrink-0"
+                activeProps={{ className: "bg-sidebar-accent !text-sidebar-primary font-medium" }}
               >
                 <Settings className="size-4" />
                 Админка
               </Link>
             )}
           </nav>
-        </header>
-        <main className="p-4">
+          <div className="hidden px-5 pb-5 md:block">
+            <button
+              onClick={signOut}
+              className="mb-3 flex w-full items-center justify-center gap-2 text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground"
+            >
+              <LogOut className="size-4" /> Выйти
+            </button>
+            <div className="truncate text-xs text-sidebar-foreground/60">{emp.email}</div>
+          </div>
+        </aside>
+        <main className="min-w-0 flex-1 p-4 md:p-10">
           <Outlet />
         </main>
         <LeadSheet
