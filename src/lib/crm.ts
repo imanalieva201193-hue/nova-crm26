@@ -760,3 +760,152 @@ export function openTasks(l: OpenTaskLead, today: string): string[] {
   }
   return out;
 }
+
+/* Workspaces use encounter rows; patients are identified independently. */
+export const WORKSPACES = {
+  rinos: { title: "RINOS", branch: "asanbay", funnel: "rinos" },
+  moskovskaya: { title: "Московская", branch: "moskovskaya", funnel: "nova_general" },
+  abd2: { title: "Абдумомунова — 2 этаж", branch: "abd2", funnel: "nova_check" },
+  abd3: { title: "Абдумомунова — 3 этаж", branch: "abd3", funnel: "nova_surgery" },
+  agents: { title: "Агентская программа", branch: "", funnel: "" },
+  business: { title: "B2B / B2C", branch: "", funnel: "" },
+  callcenter: { title: "Колл-центр — 3CX, Chat2Desk", branch: "", funnel: "" },
+  target: { title: "Таргет", branch: "", funnel: "" },
+} as const;
+export type WorkspaceKey = keyof typeof WORKSPACES;
+export function isWorkspaceKey(s: string): s is WorkspaceKey {
+  return s in WORKSPACES;
+}
+export type WorkspaceLead = ReportLead &
+  OpenTaskLead & {
+    patient_id?: string | null;
+    partner_id?: string | null;
+    work_area?: string | null;
+    business_segment?: string | null;
+    clinical_direction?: string | null;
+    campaign?: string | null;
+    channel?: string | null;
+  };
+export function inWorkspace(l: WorkspaceLead, key: WorkspaceKey, segment = ""): boolean {
+  const w = WORKSPACES[key];
+  if (w.branch)
+    return (
+      l.branch_code === w.branch &&
+      (key !== "abd2" || l.funnel === (segment === "general" ? "nova_general" : "nova_check"))
+    );
+  if (key === "agents")
+    return l.work_area === key || !!l.partner_id || l.line === "Агентская программа";
+  if (key === "business")
+    return (
+      (l.work_area === key || !!l.business_segment) && (!segment || l.business_segment === segment)
+    );
+  if (key === "callcenter")
+    return (l.work_area === key || l.line === "Колл-центр") && (!segment || l.channel === segment);
+  return l.work_area === "target" || l.source?.toLowerCase() === "таргет";
+}
+export type WorkspaceMetric = {
+  key: string;
+  label: string;
+  value: number;
+  ids: string[];
+  denominatorIds?: string[];
+  money?: boolean;
+  percent?: boolean;
+};
+export function workspaceMetrics(
+  leads: WorkspaceLead[],
+  revenue: Record<string, number>,
+  today: string,
+  partners: { id: string; bonus_per_operation: number | null }[] = [],
+): WorkspaceMetric[] {
+  const out: WorkspaceMetric[] = [];
+  const add = (
+    key: string,
+    label: string,
+    rows: WorkspaceLead[],
+    value = rows.length,
+    extra: Partial<WorkspaceMetric> = {},
+  ) => {
+    out.push({ key, label, value, ids: rows.map((l) => l.id), ...extra });
+  };
+  add("all", "Обращения", leads);
+  const unique = [
+    ...new Map(
+      leads.map((l) => [l.patient_id || normalizePhone(l.phone || "") || l.id, l]),
+    ).values(),
+  ];
+  add("patients", "Уникальные пациенты", unique);
+  const booked = leads.filter(bookedConsult);
+  add("booked", "Записались", booked);
+  add("bookedOp", "Записаны на операцию", leads.filter(bookedOp));
+  add(
+    "confirmed",
+    "Подтверждены",
+    leads.filter((l) => l.confirmed),
+  );
+  add(
+    "came",
+    "Пришли",
+    leads.filter((l) => l.came),
+  );
+  add(
+    "operations",
+    "Операции",
+    leads.filter((l) => isSurgery(l) && l.stage === FINAL),
+  );
+  const done = leads.filter((l) => l.stage === FINAL);
+  add("done", "Завершено", done);
+  add(
+    "lost",
+    "Отказы",
+    leads.filter((l) => l.outcome === "Потерянный"),
+  );
+  add(
+    "noshow",
+    "Не пришли",
+    leads.filter((l) => l.outcome === "Не пришёл"),
+  );
+  add(
+    "unprocessed",
+    "Необработанные",
+    leads.filter((l) => !l.outcome && l.stage <= 1),
+  );
+  add(
+    "processed",
+    "Обработанные",
+    leads.filter((l) => !!l.outcome || l.stage > 1),
+  );
+  if (partners.length) {
+    const operations = leads.filter(
+      (l) => !!l.partner_id && isSurgery(l) && l.stage === FINAL && !!l.operation_date,
+    );
+    add(
+      "bonus",
+      "Бонусы агентам, сом",
+      operations,
+      operations.reduce(
+        (sum, l) =>
+          sum + Number(partners.find((p) => p.id === l.partner_id)?.bonus_per_operation || 0),
+        0,
+      ),
+      { money: true },
+    );
+  }
+  add(
+    "overdue",
+    "Невыполненные действия",
+    leads.filter((l) => openTasks(l, today).length > 0),
+  );
+  add(
+    "revenue",
+    "Выручка, сом",
+    done,
+    done.reduce((sum, l) => sum + (revenue[l.id] || 0), 0),
+    { money: true },
+  );
+  add("conversion", "Конверсия в запись", booked, pct(booked.length, leads.length), {
+    percent: true,
+    denominatorIds: leads.map((l) => l.id),
+  });
+  return out;
+}

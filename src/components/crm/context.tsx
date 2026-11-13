@@ -11,6 +11,11 @@ export type NewLeadPreset = {
   parent_lead_id?: string | undefined;
   patient_name?: string | null | undefined;
   phone?: string | undefined;
+  line?: string | undefined;
+  source?: string | undefined;
+  work_area?: string | undefined;
+  business_segment?: string | undefined;
+  linkedEncounter?: boolean;
 };
 export type Crm = {
   me: Employee;

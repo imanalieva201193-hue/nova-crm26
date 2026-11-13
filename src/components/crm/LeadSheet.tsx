@@ -119,7 +119,23 @@ export function LeadSheet({
     queryKey: ["lead", leadId],
     enabled: !!leadId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("leads").select("*").eq("id", leadId!).single();
+      if (!leadId) throw new Error("Выберите обращение");
+      const { data, error } = await supabase.from("leads").select("*").eq("id", leadId).single();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const patientEncountersQ = useQuery({
+    queryKey: ["patient-encounters", leadQ.data?.patient_id],
+    enabled: !!leadQ.data?.patient_id && open,
+    queryFn: async () => {
+      const patientId = leadQ.data?.patient_id;
+      if (!patientId) return [];
+      const { data, error } = await supabase
+        .from("leads")
+        .select("id, branch_code, funnel, stage, lead_date")
+        .eq("patient_id", patientId)
+        .order("lead_date", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -169,7 +185,10 @@ export function LeadSheet({
         funnel,
         stage: 1,
         lead_date: bishkekDate(),
-        line: me.role === "branch_admin" ? "Филиал" : "Колл-центр",
+        line: preset.line ?? (me.role === "branch_admin" ? "Филиал" : "Колл-центр"),
+        source: preset.source ?? "",
+        work_area: preset.work_area ?? null,
+        business_segment: preset.business_segment ?? null,
         doctor_id: preset.doctor_id ?? null,
         foreigner: !!preset.foreigner,
         parent_lead_id: preset.parent_lead_id ?? null,
@@ -250,7 +269,8 @@ export function LeadSheet({
     warnings.push("3 попытки без ответа за 3 дня — закройте лид как «Потерянный»");
 
   async function save(extra: Partial<Form> = {}) {
-    const next = { ...f!, ...extra };
+    if (!f) return;
+    const next = { ...f, ...extra };
     const phone = normalizePhone(phoneRaw);
     if (!phone) {
       toast.error("Телефон: введите номер в формате 0555 123 456");
@@ -298,11 +318,12 @@ export function LeadSheet({
         .select("id, patient_name")
         .eq("phone", phone)
         .limit(1);
-      if (dup?.length) {
+      const existing = dup?.[0];
+      if (existing && !preset?.linkedEncounter) {
         toast.info(
-          `Пациент с этим номером уже есть (${dup[0]!.patient_name || "без имени"}) — открыта его карточка`,
+          `Пациент с этим номером уже есть (${existing.patient_name || "без имени"}) — открыта его карточка`,
         );
-        onCreated(dup[0]!.id);
+        onCreated(existing.id);
         return;
       }
       const { id: _id, created_at: _c, ...payload } = next as Lead;
@@ -333,7 +354,7 @@ export function LeadSheet({
         .from("lead_history")
         .insert({ lead_id: data.id, author_email: me.email, changes: { создано: true } });
       toast.success("Заявка создана");
-      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries();
       onCreated(data.id);
       return;
     }
@@ -358,6 +379,7 @@ export function LeadSheet({
     toast.success("Сохранено");
     setF(next);
     setOrig(next);
+    qc.invalidateQueries({ queryKey: ["workspace-data"] });
     qc.invalidateQueries({ queryKey: ["leads"] });
     qc.invalidateQueries({ queryKey: ["lead", leadId] });
     qc.invalidateQueries({ queryKey: ["history", leadId] });
@@ -434,20 +456,21 @@ export function LeadSheet({
     await save({ outcome, outcome_reason: reason });
   }
   async function toSurgeon() {
-    const target = f!.branch_code === "asanbay" ? "asanbay" : "abd3";
+    if (!f?.phone) return;
+    const target = f.branch_code === "asanbay" ? "asanbay" : "abd3";
     const { data, error } = await supabase
       .from("leads")
       .insert({
-        patient_name: f!.patient_name ?? null,
-        phone: f!.phone!,
-        source: f!.source ?? "Повторный пациент",
-        line: f!.line ?? "Филиал",
-        channel: f!.channel ?? null,
+        patient_name: f.patient_name ?? null,
+        phone: f.phone,
+        source: f.source ?? "Повторный пациент",
+        line: f.line ?? "Филиал",
+        channel: f.channel ?? null,
         branch_code: target,
         funnel: target === "asanbay" ? "rinos" : "nova_surgery",
         stage: 2,
         parent_lead_id: leadId,
-        comment: `Направлен из ${BRANCHES.find((b) => b.code === f!.branch_code)?.name}`,
+        comment: `Направлен из ${BRANCHES.find((b) => b.code === f.branch_code)?.name}`,
         responsible_email: me.email,
       })
       .select("id")
@@ -457,7 +480,7 @@ export function LeadSheet({
       return;
     }
     toast.success("Создана заявка к хирургу");
-    qc.invalidateQueries({ queryKey: ["leads"] });
+    qc.invalidateQueries();
     onCreated(data.id);
   }
 
@@ -496,6 +519,29 @@ export function LeadSheet({
         </SheetHeader>
         <MissCtx.Provider value={missLive}>
           <div className="space-y-4 px-4 pb-24">
+            {leadId && (patientEncountersQ.data?.length ?? 0) > 1 && (
+              <section className="border-b pb-3">
+                <h3 className="mb-2 text-sm font-semibold">Обращения единого пациента</h3>
+                <div className="flex flex-wrap gap-2">
+                  {patientEncountersQ.data?.map((encounter) => (
+                    <Button
+                      key={encounter.id}
+                      size="sm"
+                      variant={encounter.id === leadId ? "default" : "outline"}
+                      onClick={() => onCreated(encounter.id)}
+                    >
+                      {encounter.lead_date} ·{" "}
+                      {BRANCHES.find((b) => b.code === encounter.branch_code)?.short} ·{" "}
+                      {
+                        stageList(encounter.funnel as FunnelCode).find(
+                          (s) => s.n === encounter.stage,
+                        )?.label
+                      }
+                    </Button>
+                  ))}
+                </div>
+              </section>
+            )}
             {openLive.length > 0 && (
               <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
                 <div className="mb-1 font-semibold">Не выполнено — следующий этап закрыт</div>
@@ -572,11 +618,58 @@ export function LeadSheet({
                   onChange={(e) => set({ channel: e.target.value })}
                 >
                   <option value="">—</option>
-                  {CHANNELS.map((s) => (
+                  {[...CHANNELS, "3CX", "Chat2Desk"].map((s) => (
                     <option key={s}>{s}</option>
                   ))}
                 </select>
               </Field>
+              <Field label="Рабочее направление">
+                <select
+                  className={sel}
+                  value={f.work_area ?? ""}
+                  onChange={(e) => set({ work_area: e.target.value || null })}
+                >
+                  <option value="">Филиал</option>
+                  <option value="agents">Агентская программа</option>
+                  <option value="business">B2B / B2C</option>
+                  <option value="callcenter">Колл-центр</option>
+                  <option value="target">Таргет</option>
+                </select>
+              </Field>
+              {f.work_area === "business" && (
+                <Field label="Сегмент">
+                  <select
+                    className={sel}
+                    value={f.business_segment ?? ""}
+                    onChange={(e) => set({ business_segment: e.target.value || null })}
+                  >
+                    <option value="">—</option>
+                    <option>B2B</option>
+                    <option>B2C</option>
+                  </select>
+                </Field>
+              )}
+              {f.branch_code === "abd3" && (
+                <Field label="Направление хирургии">
+                  <select
+                    className={sel}
+                    value={f.clinical_direction ?? ""}
+                    onChange={(e) => set({ clinical_direction: e.target.value || null })}
+                  >
+                    <option value="">Не указано</option>
+                    <option>Общая хирургия</option>
+                    <option>Пластическая хирургия</option>
+                  </select>
+                </Field>
+              )}
+              {(f.work_area === "target" || f.source === "Таргет") && (
+                <Field label="Кампания">
+                  <Input
+                    value={f.campaign ?? ""}
+                    onChange={(e) => set({ campaign: e.target.value || null })}
+                  />
+                </Field>
+              )}
               <Field label="Филиал" req>
                 <select
                   className={sel}

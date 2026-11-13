@@ -33,3 +33,6 @@ use the editor.
 - Sales business rules live as pure functions in `src/lib/crm.ts` with tests in `src/lib/crm.test.ts`; UI calls them instead of re-implementing. Why: rules must stay testable.
 - Access is by the `employees` allow-list (email → role + branches) enforced with RLS helper functions (`is_staff`, `is_admin`, `can_see_branch`). Why: Google sign-in alone must not grant access.
 - Signed-in pages live under `src/routes/_authenticated/`; the shell there provides `useCrm()` (current employee, selected branch, lead card opener). Why: one place for branch filter and lead sheet.
+- Work areas share Workspace and source-record metric functions in crm.ts; counts and drilldowns use the same filtered rows. Why: reports must reconcile with the base.
+- Patients are unique normalized-phone identities; leads are linked encounters assigned by a database trigger. Why: multiple work areas and repeat visits must not duplicate patients.
+- Employee errors are leader-confirmed audited records separate from open tasks, protected by RLS. Why: lateness alone is not a confirmed error.

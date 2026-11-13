@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { CrmContext, type NewLeadPreset } from "@/components/crm/context";
 import { LeadSheet } from "@/components/crm/LeadSheet";
-import { BRANCHES, ALL_BRANCH_ROLES, ROLES } from "@/lib/crm";
+import { BRANCHES, ALL_BRANCH_ROLES, ROLES, WORKSPACES } from "@/lib/crm";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -25,6 +25,7 @@ import {
   BarChart3,
   UserCheck,
   SlidersHorizontal,
+  Menu,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -38,10 +39,6 @@ export const Route = createFileRoute("/_authenticated")({
 
 const NAV = [
   { to: "/dashboard", label: "Главная", icon: LayoutDashboard },
-  { to: "/leads", label: "Пациенты", icon: Users },
-  { to: "/surgery", label: "Хирургия", icon: Stethoscope },
-  { to: "/checkup", label: "Чекап — 2 этаж", icon: ClipboardCheck },
-  { to: "/partners", label: "Агенты", icon: Handshake },
   { to: "/admins", label: "Админы", icon: UserCheck },
   { to: "/reports", label: "Отчёты", icon: BarChart3 },
   { to: "/settings", label: "Настройки", icon: SlidersHorizontal },
@@ -68,6 +65,7 @@ function Shell() {
   const [branch, setBranchState] = useState("all");
   const [leadId, setLeadId] = useState<string | null>(null);
   const [preset, setPreset] = useState<NewLeadPreset | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const emp = meQ.data?.emp;
   useEffect(() => {
@@ -132,7 +130,22 @@ function Shell() {
       }}
     >
       <div className="min-h-screen bg-background md:flex">
-        <aside className="z-30 flex shrink-0 flex-col bg-sidebar text-sidebar-foreground md:sticky md:top-0 md:h-screen md:w-64">
+        <div className="flex items-center justify-between bg-sidebar p-3 text-sidebar-foreground md:hidden">
+          <Link to="/dashboard" className="font-display font-bold">
+            NOVA CRM
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Открыть меню"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            <Menu className="size-5" />
+          </Button>
+        </div>
+        <aside
+          className={`${menuOpen ? "flex" : "hidden"} z-30 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:sticky md:top-0 md:flex md:h-screen md:w-64`}
+        >
           <div className="px-5 pt-6 pb-4">
             <Link to="/dashboard" className="block font-display text-lg font-bold leading-tight">
               Nova CRM
@@ -166,10 +179,35 @@ function Shell() {
             </Button>
           </div>
           <nav className="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-1 md:flex-col md:overflow-y-auto">
+            {(Object.keys(WORKSPACES) as (keyof typeof WORKSPACES)[]).map((area) => (
+              <Link
+                key={area}
+                to="/work/$area"
+                params={{ area }}
+                onClick={() => setMenuOpen(false)}
+                className="flex shrink-0 items-center gap-3 rounded-md px-3 py-2.5 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent/60"
+                activeProps={{ className: "bg-sidebar-accent text-sidebar-primary font-semibold" }}
+              >
+                <Users className="size-4 shrink-0" />
+                <span>{WORKSPACES[area].title}</span>
+              </Link>
+            ))}
+            {isAdmin && (
+              <Link
+                to="/control"
+                onClick={() => setMenuOpen(false)}
+                className="mt-3 flex shrink-0 items-center gap-3 border-t border-sidebar-border px-3 py-3 text-sm"
+                activeProps={{ className: "text-sidebar-primary" }}
+              >
+                <ClipboardCheck className="size-4" />
+                Контроль сотрудников
+              </Link>
+            )}
             {NAV.map((n) => (
               <Link
                 key={n.to}
                 to={n.to}
+                onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] text-sidebar-foreground/80 hover:bg-sidebar-accent/60 shrink-0"
                 activeProps={{ className: "bg-sidebar-accent !text-sidebar-primary font-medium" }}
               >

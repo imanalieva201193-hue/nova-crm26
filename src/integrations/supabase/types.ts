@@ -121,6 +121,47 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_errors: {
+        Row: {
+          confirmed_at: string
+          confirmed_by: string
+          id: string
+          lead_id: string
+          reason: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          confirmed_at?: string
+          confirmed_by?: string
+          id?: string
+          lead_id: string
+          reason: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          confirmed_at?: string
+          confirmed_by?: string
+          id?: string
+          lead_id?: string
+          reason?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_errors_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           active: boolean
@@ -282,8 +323,11 @@ export type Database = {
           booked_by_email: string | null
           branch_code: string
           brought_by_email: string | null
+          business_segment: string | null
           came: boolean
+          campaign: string | null
           channel: string | null
+          clinical_direction: string | null
           comment: string | null
           confirmed: boolean
           confirmed_by_email: string | null
@@ -305,6 +349,7 @@ export type Database = {
           outcome_reason: string | null
           parent_lead_id: string | null
           partner_id: string | null
+          patient_id: string
           patient_name: string | null
           phone: string
           prepayment: number | null
@@ -314,13 +359,17 @@ export type Database = {
           stage: number
           visit_date: string | null
           visited_at: string | null
+          work_area: string | null
         }
         Insert: {
           booked_by_email?: string | null
           branch_code: string
           brought_by_email?: string | null
+          business_segment?: string | null
           came?: boolean
+          campaign?: string | null
           channel?: string | null
+          clinical_direction?: string | null
           comment?: string | null
           confirmed?: boolean
           confirmed_by_email?: string | null
@@ -342,6 +391,7 @@ export type Database = {
           outcome_reason?: string | null
           parent_lead_id?: string | null
           partner_id?: string | null
+          patient_id?: string
           patient_name?: string | null
           phone: string
           prepayment?: number | null
@@ -351,13 +401,17 @@ export type Database = {
           stage?: number
           visit_date?: string | null
           visited_at?: string | null
+          work_area?: string | null
         }
         Update: {
           booked_by_email?: string | null
           branch_code?: string
           brought_by_email?: string | null
+          business_segment?: string | null
           came?: boolean
+          campaign?: string | null
           channel?: string | null
+          clinical_direction?: string | null
           comment?: string | null
           confirmed?: boolean
           confirmed_by_email?: string | null
@@ -379,6 +433,7 @@ export type Database = {
           outcome_reason?: string | null
           parent_lead_id?: string | null
           partner_id?: string | null
+          patient_id?: string
           patient_name?: string | null
           phone?: string
           prepayment?: number | null
@@ -388,6 +443,7 @@ export type Database = {
           stage?: number
           visit_date?: string | null
           visited_at?: string | null
+          work_area?: string | null
         }
         Relationships: [
           {
@@ -416,6 +472,13 @@ export type Database = {
             columns: ["partner_id"]
             isOneToOne: false
             referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -543,6 +606,24 @@ export type Database = {
         }
         Relationships: []
       }
+      patients: {
+        Row: {
+          created_at: string
+          id: string
+          phone: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phone: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phone?: string
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           branch_codes: string[]
@@ -636,6 +717,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       my_email: { Args: never; Returns: string }
+      patient_phone_key: { Args: { raw: string }; Returns: string }
     }
     Enums: {
       app_role:

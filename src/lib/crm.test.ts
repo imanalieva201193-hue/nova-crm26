@@ -275,6 +275,48 @@ describe("single card attribution", () => {
 });
 
 import { openTasks } from "./crm";
+import { inWorkspace, workspaceMetrics } from "./crm";
+describe("workspace source records", () => {
+  it("calculates agent bonus only for completed operations from source rows", () => {
+    const leads = [
+      { ...base, id: "a", stage: 10, partner_id: "agent", operation_date: "2026-11-13" },
+      { ...base, id: "b", stage: 3, partner_id: "agent" },
+    ];
+    const bonus = workspaceMetrics(leads, {}, "2026-11-13", [
+      { id: "agent", bonus_per_operation: 500 },
+    ]).find((m) => m.key === "bonus");
+    expect(bonus?.value).toBe(500);
+    expect(bonus?.ids).toEqual(["a"]);
+  });
+  it("keeps the second floor checkup and general profile separate", () => {
+    const l = { ...base, id: "a", branch_code: "abd2", funnel: "nova_check" };
+    expect(inWorkspace(l, "abd2", "checkup")).toBe(true);
+    expect(inWorkspace(l, "abd2", "general")).toBe(false);
+    expect(inWorkspace({ ...l, funnel: "nova_general" }, "abd2", "general")).toBe(true);
+  });
+  it("shows a shared patient in relevant sources without creating patients", () => {
+    const l = { ...base, id: "a", source: "Таргет", partner_id: "p" };
+    expect(inWorkspace(l, "target")).toBe(true);
+    expect(inWorkspace(l, "agents")).toBe(true);
+    expect(inWorkspace(l, "business", "B2B")).toBe(false);
+  });
+  it("every metric carries the exact contributing records and conversion denominator", () => {
+    const rows = [
+      { ...base, id: "a", patient_id: "p", stage: 1 },
+      { ...base, id: "b", patient_id: "p", stage: 10, came: true },
+    ];
+    const m = Object.fromEntries(
+      workspaceMetrics(rows, { b: 12000 }, "2026-11-13").map((x) => [x.key, x]),
+    );
+    expect(m["all"]?.value).toBe(2);
+    expect(m["patients"]?.value).toBe(1);
+    expect(m["booked"]?.ids).toEqual(["b"]);
+    expect(m["revenue"]?.value).toBe(12000);
+    expect(m["revenue"]?.ids).toEqual(["b"]);
+    expect(m["conversion"]?.value).toBe(50);
+    expect(m["conversion"]?.denominatorIds).toEqual(["a", "b"]);
+  });
+});
 describe("open tasks", () => {
   const today = "2026-11-12";
   it("past visit without came, overdue touch are open; closed lead has none", () => {

@@ -1,0 +1,1 @@
+ALTER TABLE public.leads ALTER COLUMN patient_id SET DEFAULT gen_random_uuid(); COMMENT ON COLUMN public.leads.patient_id IS 'Assigned by assign_patient_identity trigger from normalized phone; insert default is replaced before constraints are checked.';

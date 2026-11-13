@@ -15,6 +15,20 @@
       "when": 1794497120789,
       "tag": "0001_lead_attribution",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794570547758,
+      "tag": "0002_workspace_patient_identity_and_control",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794570579164,
+      "tag": "0003_patient_identity_insert_default",
+      "breakpoints": true
     }
   ]
 }
