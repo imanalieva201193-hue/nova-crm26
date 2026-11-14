@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminsRouteImport } from './routes/_authenticated/admins'
+import { Route as AuthenticatedChat2deskRouteImport } from './routes/_authenticated/chat2desk'
 import { Route as AuthenticatedCheckupRouteImport } from './routes/_authenticated/checkup'
 import { Route as AuthenticatedControlRouteImport } from './routes/_authenticated/control'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -50,6 +51,11 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
 const AuthenticatedAdminsRoute = AuthenticatedAdminsRouteImport.update({
   id: '/admins',
   path: '/admins',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChat2deskRoute = AuthenticatedChat2deskRouteImport.update({
+  id: '/chat2desk',
+  path: '/chat2desk',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCheckupRoute = AuthenticatedCheckupRouteImport.update({
@@ -124,6 +130,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admins': typeof AuthenticatedAdminsRoute
+  '/chat2desk': typeof AuthenticatedChat2deskRoute
   '/checkup': typeof AuthenticatedCheckupRoute
   '/control': typeof AuthenticatedControlRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admins': typeof AuthenticatedAdminsRoute
+  '/chat2desk': typeof AuthenticatedChat2deskRoute
   '/checkup': typeof AuthenticatedCheckupRoute
   '/control': typeof AuthenticatedControlRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/admins': typeof AuthenticatedAdminsRoute
+  '/_authenticated/chat2desk': typeof AuthenticatedChat2deskRoute
   '/_authenticated/checkup': typeof AuthenticatedCheckupRoute
   '/_authenticated/control': typeof AuthenticatedControlRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin'
     | '/admins'
+    | '/chat2desk'
     | '/checkup'
     | '/control'
     | '/dashboard'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin'
     | '/admins'
+    | '/chat2desk'
     | '/checkup'
     | '/control'
     | '/dashboard'
@@ -224,6 +235,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/admin'
     | '/_authenticated/admins'
+    | '/_authenticated/chat2desk'
     | '/_authenticated/checkup'
     | '/_authenticated/control'
     | '/_authenticated/dashboard'
@@ -281,6 +293,13 @@ declare module '@tanstack/react-router' {
       path: '/admins'
       fullPath: '/admins'
       preLoaderRoute: typeof AuthenticatedAdminsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/chat2desk': {
+      id: '/_authenticated/chat2desk'
+      path: '/chat2desk'
+      fullPath: '/chat2desk'
+      preLoaderRoute: typeof AuthenticatedChat2deskRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/checkup': {
@@ -380,6 +399,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAdminsRoute: typeof AuthenticatedAdminsRoute
+  AuthenticatedChat2deskRoute: typeof AuthenticatedChat2deskRoute
   AuthenticatedCheckupRoute: typeof AuthenticatedCheckupRoute
   AuthenticatedControlRoute: typeof AuthenticatedControlRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -397,6 +417,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAdminsRoute: AuthenticatedAdminsRoute,
+  AuthenticatedChat2deskRoute: AuthenticatedChat2deskRoute,
   AuthenticatedCheckupRoute: AuthenticatedCheckupRoute,
   AuthenticatedControlRoute: AuthenticatedControlRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
