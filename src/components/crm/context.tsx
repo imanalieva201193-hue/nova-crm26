@@ -15,6 +15,7 @@ export type NewLeadPreset = {
   source?: string | undefined;
   work_area?: string | undefined;
   business_segment?: string | undefined;
+  agent_region?: string | undefined;
   linkedEncounter?: boolean;
 };
 export type Crm = {

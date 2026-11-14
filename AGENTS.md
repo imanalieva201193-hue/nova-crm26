@@ -36,3 +36,5 @@ use the editor.
 - Work areas share Workspace and source-record metric functions in crm.ts; counts and drilldowns use the same filtered rows. Why: reports must reconcile with the base.
 - Patients are unique normalized-phone identities; leads are linked encounters assigned by a database trigger. Why: multiple work areas and repeat visits must not duplicate patients.
 - Employee errors are leader-confirmed audited records separate from open tasks, protected by RLS. Why: lateness alone is not a confirmed error.
+- Section display names use shared cloud-backed labels without changing routing keys; leaders alone can write them. Why: renaming must preserve links and data.
+- Regional agent workspaces filter encounters by explicit agent region or linked partner region, not clinical branch. Why: partner geography and treatment location are distinct.

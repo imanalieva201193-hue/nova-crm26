@@ -189,6 +189,7 @@ export function LeadSheet({
         source: preset.source ?? "",
         work_area: preset.work_area ?? null,
         business_segment: preset.business_segment ?? null,
+        agent_region: preset.agent_region ?? null,
         doctor_id: preset.doctor_id ?? null,
         foreigner: !!preset.foreigner,
         parent_lead_id: preset.parent_lead_id ?? null,
@@ -636,6 +637,20 @@ export function LeadSheet({
                   <option value="target">Таргет</option>
                 </select>
               </Field>
+              {(f.work_area === "agents" || f.partner_id || f.line === "Агентская программа") && (
+                <Field label="Регион агентской программы">
+                  <select
+                    className={sel}
+                    value={f.agent_region ?? ""}
+                    onChange={(e) => set({ agent_region: e.target.value || null })}
+                  >
+                    <option value="">Не указан</option>
+                    <option>Алматы</option>
+                    <option>Бишкек</option>
+                    <option>Области</option>
+                  </select>
+                </Field>
+              )}
               {f.work_area === "business" && (
                 <Field label="Сегмент">
                   <select
@@ -768,7 +783,15 @@ export function LeadSheet({
                 <select
                   className={sel}
                   value={f.partner_id ?? ""}
-                  onChange={(e) => set({ partner_id: e.target.value || null })}
+                  onChange={(e) =>
+                    set({
+                      partner_id: e.target.value || null,
+                      agent_region:
+                        partners.find((p) => p.id === e.target.value)?.region ||
+                        f.agent_region ||
+                        null,
+                    })
+                  }
                 >
                   <option value="">Нет</option>
                   {partners.map((p) => (

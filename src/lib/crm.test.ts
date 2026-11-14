@@ -7,6 +7,8 @@ import {
   doctorWorksOn,
   shouldSuggestLost,
   FINAL,
+  agentRegion,
+  inAgentRegion,
 } from "./crm";
 
 const base = {
@@ -20,6 +22,28 @@ const base = {
 };
 
 describe("Nova CRM rules", () => {
+  it("separates Almaty, Bishkek and regional agents using partner geography", () => {
+    const partners = [
+      { id: "a", region: "Алматы" },
+      { id: "b", region: "Бишкек" },
+      { id: "c", region: "Области" },
+    ];
+    for (const [key, id, region] of [
+      ["agents_almaty", "a", "Алматы"],
+      ["agents_bishkek", "b", "Бишкек"],
+      ["agents_regions", "c", "Области"],
+    ] as const) {
+      expect(agentRegion(key)).toBe(region);
+      expect(inAgentRegion({ partner_id: id }, region, partners)).toBe(true);
+      expect(
+        inAgentRegion({ partner_id: id }, region === "Алматы" ? "Бишкек" : "Алматы", partners),
+      ).toBe(false);
+    }
+    expect(inAgentRegion({ agent_region: "Области", partner_id: "a" }, "Области", partners)).toBe(
+      true,
+    );
+    expect(inAgentRegion({}, "Алматы", partners)).toBe(false);
+  });
   it("normalizes 0555… and 555… to +996", () => {
     expect(normalizePhone("0555 12-34-56")).toBe("+996555123456");
     expect(normalizePhone("555123456")).toBe("+996555123456");

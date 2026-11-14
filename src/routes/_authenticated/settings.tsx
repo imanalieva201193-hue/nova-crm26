@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCrm } from "@/components/crm/context";
 import { BRANCHES, FUNNELS, ROLES, stageList, type FunnelCode } from "@/lib/crm";
+import { SectionNames } from "@/components/crm/SectionNames";
+import { useLabels } from "@/components/crm/labels";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 });
 
 function SettingsPage() {
+  const labels = useLabels();
   const { me, branch, setBranch, isAdmin } = useCrm();
   const sel = "h-10 rounded-md border border-input bg-card px-3 text-sm";
   return (
@@ -25,8 +28,9 @@ function SettingsPage() {
         <div className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
           Система
         </div>
-        <h1 className="font-display text-4xl font-bold">Настройки</h1>
+        <h1 className="font-display text-4xl font-bold">{labels["settings"]}</h1>
       </div>
+      {isAdmin && <SectionNames />}
       <section className="space-y-2 border-b pb-6">
         <h2 className="font-display text-xl font-bold">Профиль</h2>
         <div className="text-sm">

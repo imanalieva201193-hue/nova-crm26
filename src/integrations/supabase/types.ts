@@ -41,6 +41,21 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_labels: {
+        Row: {
+          key: string
+          title: string
+        }
+        Insert: {
+          key: string
+          title: string
+        }
+        Update: {
+          key?: string
+          title?: string
+        }
+        Relationships: []
+      }
       doctors: {
         Row: {
           branch_code: string | null
@@ -320,6 +335,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          agent_region: string | null
           booked_by_email: string | null
           branch_code: string
           brought_by_email: string | null
@@ -362,6 +378,7 @@ export type Database = {
           work_area: string | null
         }
         Insert: {
+          agent_region?: string | null
           booked_by_email?: string | null
           branch_code: string
           brought_by_email?: string | null
@@ -404,6 +421,7 @@ export type Database = {
           work_area?: string | null
         }
         Update: {
+          agent_region?: string | null
           booked_by_email?: string | null
           branch_code?: string
           brought_by_email?: string | null
@@ -569,37 +587,55 @@ export type Database = {
       }
       partners: {
         Row: {
+          address: string | null
           bonus_per_operation: number | null
           city: string | null
           clinic: string | null
           created_at: string
           curator_email: string | null
+          email: string | null
           id: string
+          import_key: string | null
           name: string
+          notes: string | null
+          phone: string | null
+          region: string | null
           specialty: string | null
           status: string | null
           type: string | null
         }
         Insert: {
+          address?: string | null
           bonus_per_operation?: number | null
           city?: string | null
           clinic?: string | null
           created_at?: string
           curator_email?: string | null
+          email?: string | null
           id?: string
+          import_key?: string | null
           name: string
+          notes?: string | null
+          phone?: string | null
+          region?: string | null
           specialty?: string | null
           status?: string | null
           type?: string | null
         }
         Update: {
+          address?: string | null
           bonus_per_operation?: number | null
           city?: string | null
           clinic?: string | null
           created_at?: string
           curator_email?: string | null
+          email?: string | null
           id?: string
+          import_key?: string | null
           name?: string
+          notes?: string | null
+          phone?: string | null
+          region?: string | null
           specialty?: string | null
           status?: string | null
           type?: string | null

@@ -29,6 +29,13 @@
       "when": 1794570579164,
       "tag": "0003_patient_identity_insert_default",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794637622203,
+      "tag": "0004_workspace_names_and_agent_regions",
+      "breakpoints": true
     }
   ]
 }

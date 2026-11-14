@@ -768,6 +768,9 @@ export const WORKSPACES = {
   abd2: { title: "Абдумомунова — 2 этаж", branch: "abd2", funnel: "nova_check" },
   abd3: { title: "Абдумомунова — 3 этаж", branch: "abd3", funnel: "nova_surgery" },
   agents: { title: "Агентская программа", branch: "", funnel: "" },
+  agents_almaty: { title: "Агентская программа — Алматы", branch: "", funnel: "" },
+  agents_bishkek: { title: "Агентская программа — Бишкек", branch: "", funnel: "" },
+  agents_regions: { title: "Агентская программа — Области", branch: "", funnel: "" },
   business: { title: "B2B / B2C", branch: "", funnel: "" },
   callcenter: { title: "Колл-центр — 3CX, Chat2Desk", branch: "", funnel: "" },
   target: { title: "Таргет", branch: "", funnel: "" },
@@ -775,6 +778,26 @@ export const WORKSPACES = {
 export type WorkspaceKey = keyof typeof WORKSPACES;
 export function isWorkspaceKey(s: string): s is WorkspaceKey {
   return s in WORKSPACES;
+}
+export function agentRegion(key: WorkspaceKey): string {
+  return (
+    (
+      { agents_almaty: "Алматы", agents_bishkek: "Бишкек", agents_regions: "Области" } as Record<
+        string,
+        string
+      >
+    )[key] || ""
+  );
+}
+export function inAgentRegion(
+  lead: { agent_region?: string | null; partner_id?: string | null },
+  region: string,
+  partners: { id: string; region?: string | null }[],
+): boolean {
+  return (
+    !region ||
+    (lead.agent_region || partners.find((p) => p.id === lead.partner_id)?.region) === region
+  );
 }
 export type WorkspaceLead = ReportLead &
   OpenTaskLead & {
@@ -793,8 +816,8 @@ export function inWorkspace(l: WorkspaceLead, key: WorkspaceKey, segment = ""): 
       l.branch_code === w.branch &&
       (key !== "abd2" || l.funnel === (segment === "general" ? "nova_general" : "nova_check"))
     );
-  if (key === "agents")
-    return l.work_area === key || !!l.partner_id || l.line === "Агентская программа";
+  if (key === "agents" || key.startsWith("agents_"))
+    return l.work_area === "agents" || !!l.partner_id || l.line === "Агентская программа";
   if (key === "business")
     return (
       (l.work_area === key || !!l.business_segment) && (!segment || l.business_segment === segment)

@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { useLabels } from "@/components/crm/labels";
 
 export const Route = createFileRoute("/_authenticated/leads")({
   head: () => ({
@@ -34,7 +35,8 @@ const sel = "h-9 rounded-md border border-input bg-card px-2 text-sm";
 const CATS = ["Первичные", "Прогретые", "Финал", "Потерянные", "Не пришли", "Мусорные"];
 
 function LeadsPage() {
-  const { branch, openLead } = useCrm();
+  const labels = useLabels();
+  const { branch, openLead, newLead } = useCrm();
   const leads = useQuery(leadsQ(branch)).data ?? [];
   const doctors = useDoctors();
   const [q, setQ] = useState("");
@@ -91,8 +93,9 @@ function LeadsPage() {
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <h1 className="mr-2 font-display text-xl font-bold">
-          Пациенты <span className="text-sm text-muted-foreground">{rows.length}</span>
+          {labels["leads"]} <span className="text-sm text-muted-foreground">{rows.length}</span>
         </h1>
+        <Button onClick={() => newLead()}>Добавить пациента</Button>
         <Input
           className="w-64"
           placeholder="Имя, телефон, врач, комментарий"

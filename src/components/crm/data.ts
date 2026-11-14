@@ -23,7 +23,21 @@ export const lookupsQ = queryOptions({
 });
 export const partnersQ = queryOptions({
   queryKey: ["partners"],
-  queryFn: () => all(supabase.from("partners").select("*").order("name")),
+  queryFn: async () => {
+    const rows: Tables<"partners">[] = [];
+    for (let from = 0; ; from += 1000) {
+      const page = await all(
+        supabase
+          .from("partners")
+          .select("*")
+          .order("name")
+          .order("id")
+          .range(from, from + 999),
+      );
+      rows.push(...page);
+      if (page.length < 1000) return rows;
+    }
+  },
 });
 export const employeesQ = queryOptions({
   queryKey: ["employees"],

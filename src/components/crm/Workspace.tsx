@@ -4,6 +4,8 @@ import { useCrm } from "./context";
 import { employeesQ, partnersQ, workspaceDataQ, type Lead } from "./data";
 import {
   WORKSPACES,
+  agentRegion,
+  inAgentRegion,
   inWorkspace,
   workspaceMetrics,
   bishkekDate,
@@ -21,11 +23,15 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Download, Plus, ArrowUpRight } from "lucide-react";
 import { exportWorkbook } from "./workspace-export";
 import { PartnerBase } from "./WorkspacePartners";
+import { useLabels } from "./labels";
 
 const selectClass = "h-10 max-w-full rounded-md border border-input bg-card px-3 text-sm";
 export function Workspace({ area }: { area: WorkspaceKey }) {
   const { branch, newLead, openLead } = useCrm();
   const config = WORKSPACES[area];
+  const labels = useLabels();
+  const region = agentRegion(area);
+  const isAgents = area === "agents" || !!region;
   const query = useQuery(workspaceDataQ);
   const employees = useQuery(employeesQ).data ?? [];
   const partners = useQuery(partnersQ).data ?? [];
@@ -47,8 +53,8 @@ export function Workspace({ area }: { area: WorkspaceKey }) {
   const nameOf = (email: string | null) =>
     employees.find((e) => e.email === email)?.full_name || email || "Без ответственного";
   const scoped = useMemo(
-    () => leads.filter((l) => inWorkspace(l, area, segment)),
-    [leads, area, segment],
+    () => leads.filter((l) => inWorkspace(l, area, segment) && inAgentRegion(l, region, partners)),
+    [leads, area, segment, region, partners],
   );
   const filtered = scoped.filter(
     (l) =>
@@ -68,7 +74,7 @@ export function Workspace({ area }: { area: WorkspaceKey }) {
     filtered,
     query.data?.revenue ?? {},
     bishkekDate(),
-    area === "agents" ? partners : [],
+    isAgents ? partners : [],
   );
   const currentMetric = drill ? metrics.find((m) => m.key === drill.key) : null;
   const ids = group === "denominator" ? currentMetric?.denominatorIds : currentMetric?.ids;
@@ -96,7 +102,8 @@ export function Workspace({ area }: { area: WorkspaceKey }) {
       Итоги: metrics.map((m) => ({ Показатель: m.label, Значение: m.value })),
       Фильтры: [
         {
-          Раздел: config.title,
+          Раздел: labels[area],
+          Регион: region,
           Направление: segment,
           Период: period,
           От: range?.from || "",
@@ -120,9 +127,9 @@ export function Workspace({ area }: { area: WorkspaceKey }) {
             ? "nova_general"
             : "nova_check"
           : config.funnel || undefined,
-      work_area: config.branch ? undefined : area,
-      line:
-        area === "agents" ? "Агентская программа" : area === "callcenter" ? "Колл-центр" : "Филиал",
+      work_area: config.branch ? undefined : isAgents ? "agents" : area,
+      agent_region: region || undefined,
+      line: isAgents ? "Агентская программа" : area === "callcenter" ? "Колл-центр" : "Филиал",
       source: area === "target" ? "Таргет" : undefined,
       business_segment: area === "business" && segment ? segment : undefined,
     });
@@ -134,7 +141,7 @@ export function Workspace({ area }: { area: WorkspaceKey }) {
           Рабочее направление
         </div>
         <h1 className="mt-2 break-words font-display text-2xl font-bold lg:text-3xl">
-          {config.title}
+          {labels[area]}
         </h1>
       </header>
       <div className="flex w-fit rounded-md bg-muted p-1" role="tablist" aria-label="База и отчёт">
@@ -186,7 +193,7 @@ export function Workspace({ area }: { area: WorkspaceKey }) {
           ))}
         </div>
       )}
-      {tab === "base" && (area === "agents" || (area === "business" && segment === "B2B")) && (
+      {tab === "base" && (isAgents || (area === "business" && segment === "B2B")) && (
         <div className="flex gap-2">
           <Button
             variant={entity === "patients" ? "default" : "outline"}
@@ -202,8 +209,8 @@ export function Workspace({ area }: { area: WorkspaceKey }) {
           </Button>
         </div>
       )}
-      {tab === "base" && entity === "partners" && (area === "agents" || area === "business") ? (
-        <PartnerBase segment={area === "business" ? "B2B" : "agents"} />
+      {tab === "base" && entity === "partners" && (isAgents || area === "business") ? (
+        <PartnerBase segment={area === "business" ? "B2B" : "agents"} region={region} />
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
@@ -249,7 +256,7 @@ export function Workspace({ area }: { area: WorkspaceKey }) {
                 .filter(([, w]) => w.branch)
                 .map(([key, w]) => (
                   <option key={key} value={w.branch}>
-                    {w.title}
+                    {labels[key]}
                   </option>
                 ))}
             </select>

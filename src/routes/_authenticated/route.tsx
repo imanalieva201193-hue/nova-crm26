@@ -6,6 +6,7 @@ import { CrmContext, type NewLeadPreset } from "@/components/crm/context";
 import { LeadSheet } from "@/components/crm/LeadSheet";
 import { BRANCHES, ALL_BRANCH_ROLES, ROLES, WORKSPACES } from "@/lib/crm";
 import { Button } from "@/components/ui/button";
+import { useLabels } from "@/components/crm/labels";
 import {
   Select,
   SelectContent,
@@ -39,12 +40,14 @@ export const Route = createFileRoute("/_authenticated")({
 
 const NAV = [
   { to: "/dashboard", label: "Главная", icon: LayoutDashboard },
+  { to: "/leads", label: "База пациентов", icon: Users },
   { to: "/admins", label: "Админы", icon: UserCheck },
   { to: "/reports", label: "Отчёты", icon: BarChart3 },
   { to: "/settings", label: "Настройки", icon: SlidersHorizontal },
 ] as const;
 
 function Shell() {
+  const labels = useLabels();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const meQ = useQuery({
@@ -189,7 +192,7 @@ function Shell() {
                 activeProps={{ className: "bg-sidebar-accent text-sidebar-primary font-semibold" }}
               >
                 <Users className="size-4 shrink-0" />
-                <span>{WORKSPACES[area].title}</span>
+                <span>{labels[area]}</span>
               </Link>
             ))}
             {isAdmin && (
@@ -200,7 +203,7 @@ function Shell() {
                 activeProps={{ className: "text-sidebar-primary" }}
               >
                 <ClipboardCheck className="size-4" />
-                Контроль сотрудников
+                {labels["control"]}
               </Link>
             )}
             {NAV.map((n) => (
@@ -212,7 +215,7 @@ function Shell() {
                 activeProps={{ className: "bg-sidebar-accent !text-sidebar-primary font-medium" }}
               >
                 <n.icon className="size-4" />
-                {n.label}
+                {labels[n.to.slice(1)] || n.label}
               </Link>
             ))}
             {isAdmin && (
@@ -222,7 +225,7 @@ function Shell() {
                 activeProps={{ className: "bg-sidebar-accent !text-sidebar-primary font-medium" }}
               >
                 <Settings className="size-4" />
-                Сотрудники
+                {labels["admin"]}
               </Link>
             )}
           </nav>
