@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { installChunkRecovery, isChunkLoadError, recoverChunkLoad } from "@/lib/chunk-recovery";
+import { Button } from "@/components/ui/button";
 
 function NotFoundComponent() {
   return (
@@ -35,10 +37,10 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: ErrorComponentProps) {
-  console.error(error);
+export function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   useEffect(() => {
+    if (recoverChunkLoad(error)) return;
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
@@ -52,15 +54,18 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
           Что-то пошло не так. Попробуйте обновить.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
+          <Button
             onClick={() => {
-              router.invalidate();
-              reset();
+              if (isChunkLoadError(error)) {
+                window.location.reload();
+              } else {
+                void router.invalidate().then(() => reset());
+              }
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Повторить
-          </button>
+          </Button>
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
@@ -111,6 +116,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  useEffect(() => installChunkRecovery(), []);
   return (
     <html lang="ru">
       <head>
