@@ -36,6 +36,13 @@
       "when": 1794637622203,
       "tag": "0004_workspace_names_and_agent_regions",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794640924317,
+      "tag": "0005_chat2desk_isolated_client_counts",
+      "breakpoints": true
     }
   ]
 }

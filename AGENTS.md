@@ -39,3 +39,5 @@ use the editor.
 - Section display names use shared cloud-backed labels without changing routing keys; leaders alone can write them. Why: renaming must preserve links and data.
 - Regional agent workspaces filter encounters by explicit agent region or linked partner region, not clinical branch. Why: partner geography and treatment location are distinct.
 - Client chunk failures refresh the document at most once per minute with a session guard and retain a manual error fallback. Why: stale deployment asset URLs cannot be fixed by retrying the same import, and network failures must not cause reload loops.
+- Chat2Desk uses an isolated public TanStack webhook and admin server function; atomic service-only ingestion deduplicates events and updates messenger identities without creating leads. Why: retries must not inflate CRM or messenger counts.
+- Unsigned Chat2Desk requests store non-personal diagnostics with independent keys; reports count only verified new-request events and partition distinct clients into new and repeat. Why: unverified payloads must not inject personal data or poison valid delivery keys.

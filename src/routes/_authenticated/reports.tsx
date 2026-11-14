@@ -30,6 +30,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Download, Sparkles } from "lucide-react";
 import { summarizeReport } from "@/lib/report-ai.functions";
 import { contributionReport } from "@/lib/crm";
+import { Chat2deskReport } from "@/components/crm/Chat2deskReport";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -65,6 +66,7 @@ function ReportsPage() {
         <h1 className="font-display text-4xl font-bold">Отчёты</h1>
       </div>
       <SummaryReport />
+      <Chat2deskReport />
     </div>
   );
 }

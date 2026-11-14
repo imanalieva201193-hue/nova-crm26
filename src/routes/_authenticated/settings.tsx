@@ -3,6 +3,7 @@ import { useCrm } from "@/components/crm/context";
 import { BRANCHES, FUNNELS, ROLES, stageList, type FunnelCode } from "@/lib/crm";
 import { SectionNames } from "@/components/crm/SectionNames";
 import { useLabels } from "@/components/crm/labels";
+import { Chat2deskIntegration } from "@/components/crm/Chat2deskIntegration";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -31,6 +32,7 @@ function SettingsPage() {
         <h1 className="font-display text-4xl font-bold">{labels["settings"]}</h1>
       </div>
       {isAdmin && <SectionNames />}
+      {isAdmin && <Chat2deskIntegration />}
       <section className="space-y-2 border-b pb-6">
         <h2 className="font-display text-xl font-bold">Профиль</h2>
         <div className="text-sm">

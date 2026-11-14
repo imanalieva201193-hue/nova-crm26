@@ -41,6 +41,98 @@ export type Database = {
         }
         Relationships: []
       }
+      chat2desk_clients: {
+        Row: {
+          client_id: number
+          first_channel_id: number | null
+          first_seen_at: string | null
+          first_transport: string | null
+          last_seen_at: string | null
+          messenger_id: string | null
+          name: string | null
+          patient_id: string | null
+          phone: string | null
+          requests_count: number
+        }
+        Insert: {
+          client_id: number
+          first_channel_id?: number | null
+          first_seen_at?: string | null
+          first_transport?: string | null
+          last_seen_at?: string | null
+          messenger_id?: string | null
+          name?: string | null
+          patient_id?: string | null
+          phone?: string | null
+          requests_count?: number
+        }
+        Update: {
+          client_id?: number
+          first_channel_id?: number | null
+          first_seen_at?: string | null
+          first_transport?: string | null
+          last_seen_at?: string | null
+          messenger_id?: string | null
+          name?: string | null
+          patient_id?: string | null
+          phone?: string | null
+          requests_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat2desk_clients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat2desk_events: {
+        Row: {
+          channel_id: number | null
+          client_id: number | null
+          event_key: string
+          event_time: string | null
+          hook_type: string | null
+          id: string
+          is_new_client: boolean | null
+          payload: Json | null
+          received_at: string
+          request_id: number | null
+          signature_valid: boolean
+          transport: string | null
+        }
+        Insert: {
+          channel_id?: number | null
+          client_id?: number | null
+          event_key: string
+          event_time?: string | null
+          hook_type?: string | null
+          id?: string
+          is_new_client?: boolean | null
+          payload?: Json | null
+          received_at?: string
+          request_id?: number | null
+          signature_valid?: boolean
+          transport?: string | null
+        }
+        Update: {
+          channel_id?: number | null
+          client_id?: number | null
+          event_key?: string
+          event_time?: string | null
+          hook_type?: string | null
+          id?: string
+          is_new_client?: boolean | null
+          payload?: Json | null
+          received_at?: string
+          request_id?: number | null
+          signature_valid?: boolean
+          transport?: string | null
+        }
+        Relationships: []
+      }
       crm_labels: {
         Row: {
           key: string
@@ -750,6 +842,7 @@ export type Database = {
     Functions: {
       can_see_branch: { Args: { _code: string }; Returns: boolean }
       claim_first_admin: { Args: never; Returns: boolean }
+      ingest_chat2desk_event: { Args: { _event: Json }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       my_email: { Args: never; Returns: string }

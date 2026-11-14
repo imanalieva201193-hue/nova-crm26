@@ -26,6 +26,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSurgeryRouteImport } from './routes/_authenticated/surgery'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedWorkAreaRouteImport } from './routes/_authenticated/work.$area'
+import { Route as ApiPublicChat2deskWebhookRouteImport } from './routes/api/public/chat2desk-webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -111,6 +112,12 @@ const AuthenticatedWorkAreaRoute = AuthenticatedWorkAreaRouteImport.update({
   path: '/work/$area',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicChat2deskWebhookRoute =
+  ApiPublicChat2deskWebhookRouteImport.update({
+    id: '/api/public/chat2desk-webhook',
+    path: '/api/public/chat2desk-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -129,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/surgery': typeof AuthenticatedSurgeryRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/work/$area': typeof AuthenticatedWorkAreaRoute
+  '/api/public/chat2desk-webhook': typeof ApiPublicChat2deskWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -147,6 +155,7 @@ export interface FileRoutesByTo {
   '/surgery': typeof AuthenticatedSurgeryRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/work/$area': typeof AuthenticatedWorkAreaRoute
+  '/api/public/chat2desk-webhook': typeof ApiPublicChat2deskWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -167,6 +176,7 @@ export interface FileRoutesById {
   '/_authenticated/surgery': typeof AuthenticatedSurgeryRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/work/$area': typeof AuthenticatedWorkAreaRoute
+  '/api/public/chat2desk-webhook': typeof ApiPublicChat2deskWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/surgery'
     | '/tasks'
     | '/work/$area'
+    | '/api/public/chat2desk-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/surgery'
     | '/tasks'
     | '/work/$area'
+    | '/api/public/chat2desk-webhook'
   id:
     | '__root__'
     | '/'
@@ -224,12 +236,14 @@ export interface FileRouteTypes {
     | '/_authenticated/surgery'
     | '/_authenticated/tasks'
     | '/_authenticated/work/$area'
+    | '/api/public/chat2desk-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicChat2deskWebhookRoute: typeof ApiPublicChat2deskWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -353,6 +367,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkAreaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/chat2desk-webhook': {
+      id: '/api/public/chat2desk-webhook'
+      path: '/api/public/chat2desk-webhook'
+      fullPath: '/api/public/chat2desk-webhook'
+      preLoaderRoute: typeof ApiPublicChat2deskWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -397,6 +418,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicChat2deskWebhookRoute: ApiPublicChat2deskWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
