@@ -27,6 +27,7 @@ import {
   UserCheck,
   SlidersHorizontal,
   Menu,
+  MessageCircle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -41,6 +42,7 @@ export const Route = createFileRoute("/_authenticated")({
 const NAV = [
   { to: "/dashboard", label: "Главная", icon: LayoutDashboard },
   { to: "/leads", label: "База пациентов", icon: Users },
+  { to: "/chat2desk", label: "Клиенты Chat2Desk", icon: MessageCircle },
   { to: "/admins", label: "Админы", icon: UserCheck },
   { to: "/reports", label: "Отчёты", icon: BarChart3 },
   { to: "/settings", label: "Настройки", icon: SlidersHorizontal },
