@@ -41,6 +41,66 @@ export type Database = {
         }
         Relationships: []
       }
+      chat2desk_backfill_jobs: {
+        Row: {
+          api_calls: number
+          api_host: string | null
+          clients_imported: number
+          clients_offset: number
+          created_at: string
+          cursor_start_id: number | null
+          error: string | null
+          from_date: string
+          id: string
+          lease_token: string | null
+          lease_until: string | null
+          phase: string
+          requests_imported: number
+          started_by: string
+          status: string
+          to_date: string
+          updated_at: string
+        }
+        Insert: {
+          api_calls?: number
+          api_host?: string | null
+          clients_imported?: number
+          clients_offset?: number
+          created_at?: string
+          cursor_start_id?: number | null
+          error?: string | null
+          from_date: string
+          id?: string
+          lease_token?: string | null
+          lease_until?: string | null
+          phase?: string
+          requests_imported?: number
+          started_by: string
+          status?: string
+          to_date: string
+          updated_at?: string
+        }
+        Update: {
+          api_calls?: number
+          api_host?: string | null
+          clients_imported?: number
+          clients_offset?: number
+          created_at?: string
+          cursor_start_id?: number | null
+          error?: string | null
+          from_date?: string
+          id?: string
+          lease_token?: string | null
+          lease_until?: string | null
+          phase?: string
+          requests_imported?: number
+          started_by?: string
+          status?: string
+          to_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chat2desk_clients: {
         Row: {
           client_id: number
@@ -840,8 +900,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_chat2desk_backfill_page: {
+        Args: {
+          _clients: Json
+          _cursor: number
+          _events: Json
+          _host: string
+          _id: string
+          _lease: string
+          _offset: number
+          _phase: string
+        }
+        Returns: Json
+      }
       can_see_branch: { Args: { _code: string }; Returns: boolean }
+      claim_chat2desk_backfill: {
+        Args: { _id: string; _lease: string }
+        Returns: Json
+      }
       claim_first_admin: { Args: never; Returns: boolean }
+      finish_chat2desk_backfill: {
+        Args: { _id: string; _lease: string }
+        Returns: Json
+      }
       ingest_chat2desk_event: { Args: { _event: Json }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }

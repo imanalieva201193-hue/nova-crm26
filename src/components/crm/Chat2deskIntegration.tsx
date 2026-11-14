@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { registerChat2deskWebhook } from "@/lib/chat2desk.functions";
 import { CHAT2DESK_WEBHOOK_URL, messengerBounds, messengerDate } from "@/lib/chat2desk";
+import { Chat2deskHistory } from "./Chat2deskHistory";
 
 export function Chat2deskIntegration() {
   const register = useServerFn(registerChat2deskWebhook);
@@ -51,5 +52,6 @@ export function Chat2deskIntegration() {
       <Button variant="outline" size="icon" title="Обновить состояние" aria-label="Обновить состояние" onClick={() => status.refetch()}><RefreshCw className="size-4" /></Button>
     </div>
     {result && <p role="status" className="text-sm">{result}</p>}
+    <Chat2deskHistory />
   </section>;
 }
