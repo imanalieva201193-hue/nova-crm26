@@ -14,6 +14,300 @@ export type Database = {
   }
   public: {
     Tables: {
+      altegio_categories: {
+        Row: {
+          category_id: number
+          kind: string | null
+          title: string | null
+        }
+        Insert: {
+          category_id: number
+          kind?: string | null
+          title?: string | null
+        }
+        Update: {
+          category_id?: number
+          kind?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
+      altegio_events: {
+        Row: {
+          error: string | null
+          hook_id: string | null
+          id: string
+          location_id: number | null
+          received_at: string
+          resource: string | null
+          resource_id: number | null
+          result: string | null
+          status: string | null
+        }
+        Insert: {
+          error?: string | null
+          hook_id?: string | null
+          id?: string
+          location_id?: number | null
+          received_at?: string
+          resource?: string | null
+          resource_id?: number | null
+          result?: string | null
+          status?: string | null
+        }
+        Update: {
+          error?: string | null
+          hook_id?: string | null
+          id?: string
+          location_id?: number | null
+          received_at?: string
+          resource?: string | null
+          resource_id?: number | null
+          result?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      altegio_jobs: {
+        Row: {
+          api_calls: number
+          created_at: string
+          error: string | null
+          from_date: string
+          id: string
+          imported: number
+          kind: string
+          lease_until: string | null
+          loc_index: number
+          location_ids: number[]
+          page: number
+          started_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          api_calls?: number
+          created_at?: string
+          error?: string | null
+          from_date: string
+          id?: string
+          imported?: number
+          kind?: string
+          lease_until?: string | null
+          loc_index?: number
+          location_ids?: number[]
+          page?: number
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          api_calls?: number
+          created_at?: string
+          error?: string | null
+          from_date?: string
+          id?: string
+          imported?: number
+          kind?: string
+          lease_until?: string | null
+          loc_index?: number
+          location_ids?: number[]
+          page?: number
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      altegio_locations: {
+        Row: {
+          branch_code: string | null
+          location_id: number
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_code?: string | null
+          location_id: number
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_code?: string | null
+          location_id?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "altegio_locations_branch_code_fkey"
+            columns: ["branch_code"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      altegio_records: {
+        Row: {
+          amount: number
+          attendance: number
+          branch_code: string | null
+          changed_at_altegio: string | null
+          client_id: number | null
+          client_name: string | null
+          confirmed: boolean
+          created_at_altegio: string | null
+          created_user_id: number | null
+          deleted: boolean
+          direction: string | null
+          kind: string | null
+          lead_id: string | null
+          location_id: number
+          matched_existing: boolean | null
+          payload: Json
+          phone: string | null
+          phone_key: string | null
+          record_id: number
+          services: Json
+          staff_id: number | null
+          staff_name: string | null
+          synced_at: string
+          visit_at: string | null
+        }
+        Insert: {
+          amount?: number
+          attendance?: number
+          branch_code?: string | null
+          changed_at_altegio?: string | null
+          client_id?: number | null
+          client_name?: string | null
+          confirmed?: boolean
+          created_at_altegio?: string | null
+          created_user_id?: number | null
+          deleted?: boolean
+          direction?: string | null
+          kind?: string | null
+          lead_id?: string | null
+          location_id: number
+          matched_existing?: boolean | null
+          payload?: Json
+          phone?: string | null
+          phone_key?: string | null
+          record_id: number
+          services?: Json
+          staff_id?: number | null
+          staff_name?: string | null
+          synced_at?: string
+          visit_at?: string | null
+        }
+        Update: {
+          amount?: number
+          attendance?: number
+          branch_code?: string | null
+          changed_at_altegio?: string | null
+          client_id?: number | null
+          client_name?: string | null
+          confirmed?: boolean
+          created_at_altegio?: string | null
+          created_user_id?: number | null
+          deleted?: boolean
+          direction?: string | null
+          kind?: string | null
+          lead_id?: string | null
+          location_id?: number
+          matched_existing?: boolean | null
+          payload?: Json
+          phone?: string | null
+          phone_key?: string | null
+          record_id?: number
+          services?: Json
+          staff_id?: number | null
+          staff_name?: string | null
+          synced_at?: string
+          visit_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "altegio_records_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      altegio_services: {
+        Row: {
+          category_id: number | null
+          service_id: number
+          title: string | null
+        }
+        Insert: {
+          category_id?: number | null
+          service_id: number
+          title?: string | null
+        }
+        Update: {
+          category_id?: number | null
+          service_id?: number
+          title?: string | null
+        }
+        Relationships: []
+      }
+      altegio_staff: {
+        Row: {
+          doctor_id: string | null
+          location_id: number
+          manual: boolean
+          name: string | null
+          staff_id: number
+        }
+        Insert: {
+          doctor_id?: string | null
+          location_id: number
+          manual?: boolean
+          name?: string | null
+          staff_id: number
+        }
+        Update: {
+          doctor_id?: string | null
+          location_id?: number
+          manual?: boolean
+          name?: string | null
+          staff_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "altegio_staff_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      altegio_users: {
+        Row: {
+          employee_email: string | null
+          manual: boolean
+          name: string | null
+          user_id: number
+        }
+        Insert: {
+          employee_email?: string | null
+          manual?: boolean
+          name?: string | null
+          user_id: number
+        }
+        Update: {
+          employee_email?: string | null
+          manual?: boolean
+          name?: string | null
+          user_id?: number
+        }
+        Relationships: []
+      }
       branches: {
         Row: {
           address: string | null
@@ -900,6 +1194,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      altegio_name_key: { Args: { raw: string }; Returns: string }
+      apply_altegio_records: { Args: { _rows: Json }; Returns: Json }
       apply_chat2desk_backfill_page: {
         Args: {
           _clients: Json
@@ -914,6 +1210,7 @@ export type Database = {
         Returns: Json
       }
       can_see_branch: { Args: { _code: string }; Returns: boolean }
+      claim_altegio_job: { Args: { _id: string }; Returns: Json }
       claim_chat2desk_backfill: {
         Args: { _id: string; _lease: string }
         Returns: Json
@@ -925,6 +1222,7 @@ export type Database = {
       }
       ingest_chat2desk_event: { Args: { _event: Json }; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
+      is_director: { Args: never; Returns: boolean }
       is_staff: { Args: never; Returns: boolean }
       my_email: { Args: never; Returns: string }
       patient_phone_key: { Args: { raw: string }; Returns: string }

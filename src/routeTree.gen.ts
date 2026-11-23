@@ -27,7 +27,9 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSurgeryRouteImport } from './routes/_authenticated/surgery'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedWorkAreaRouteImport } from './routes/_authenticated/work.$area'
+import { Route as ApiPublicAltegioWebhookRouteImport } from './routes/api/public/altegio-webhook'
 import { Route as ApiPublicChat2deskWebhookRouteImport } from './routes/api/public/chat2desk-webhook'
+import { Route as ApiPublicJobsAltegioReconcileRouteImport } from './routes/api/public/jobs/altegio-reconcile'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -118,10 +120,21 @@ const AuthenticatedWorkAreaRoute = AuthenticatedWorkAreaRouteImport.update({
   path: '/work/$area',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicAltegioWebhookRoute = ApiPublicAltegioWebhookRouteImport.update({
+  id: '/api/public/altegio-webhook',
+  path: '/api/public/altegio-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicChat2deskWebhookRoute =
   ApiPublicChat2deskWebhookRouteImport.update({
     id: '/api/public/chat2desk-webhook',
     path: '/api/public/chat2desk-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicJobsAltegioReconcileRoute =
+  ApiPublicJobsAltegioReconcileRouteImport.update({
+    id: '/api/public/jobs/altegio-reconcile',
+    path: '/api/public/jobs/altegio-reconcile',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -143,7 +156,9 @@ export interface FileRoutesByFullPath {
   '/surgery': typeof AuthenticatedSurgeryRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/work/$area': typeof AuthenticatedWorkAreaRoute
+  '/api/public/altegio-webhook': typeof ApiPublicAltegioWebhookRoute
   '/api/public/chat2desk-webhook': typeof ApiPublicChat2deskWebhookRoute
+  '/api/public/jobs/altegio-reconcile': typeof ApiPublicJobsAltegioReconcileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -163,7 +178,9 @@ export interface FileRoutesByTo {
   '/surgery': typeof AuthenticatedSurgeryRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/work/$area': typeof AuthenticatedWorkAreaRoute
+  '/api/public/altegio-webhook': typeof ApiPublicAltegioWebhookRoute
   '/api/public/chat2desk-webhook': typeof ApiPublicChat2deskWebhookRoute
+  '/api/public/jobs/altegio-reconcile': typeof ApiPublicJobsAltegioReconcileRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -185,7 +202,9 @@ export interface FileRoutesById {
   '/_authenticated/surgery': typeof AuthenticatedSurgeryRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/work/$area': typeof AuthenticatedWorkAreaRoute
+  '/api/public/altegio-webhook': typeof ApiPublicAltegioWebhookRoute
   '/api/public/chat2desk-webhook': typeof ApiPublicChat2deskWebhookRoute
+  '/api/public/jobs/altegio-reconcile': typeof ApiPublicJobsAltegioReconcileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -207,7 +226,9 @@ export interface FileRouteTypes {
     | '/surgery'
     | '/tasks'
     | '/work/$area'
+    | '/api/public/altegio-webhook'
     | '/api/public/chat2desk-webhook'
+    | '/api/public/jobs/altegio-reconcile'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -227,7 +248,9 @@ export interface FileRouteTypes {
     | '/surgery'
     | '/tasks'
     | '/work/$area'
+    | '/api/public/altegio-webhook'
     | '/api/public/chat2desk-webhook'
+    | '/api/public/jobs/altegio-reconcile'
   id:
     | '__root__'
     | '/'
@@ -248,14 +271,18 @@ export interface FileRouteTypes {
     | '/_authenticated/surgery'
     | '/_authenticated/tasks'
     | '/_authenticated/work/$area'
+    | '/api/public/altegio-webhook'
     | '/api/public/chat2desk-webhook'
+    | '/api/public/jobs/altegio-reconcile'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicAltegioWebhookRoute: typeof ApiPublicAltegioWebhookRoute
   ApiPublicChat2deskWebhookRoute: typeof ApiPublicChat2deskWebhookRoute
+  ApiPublicJobsAltegioReconcileRoute: typeof ApiPublicJobsAltegioReconcileRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -386,11 +413,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWorkAreaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/altegio-webhook': {
+      id: '/api/public/altegio-webhook'
+      path: '/api/public/altegio-webhook'
+      fullPath: '/api/public/altegio-webhook'
+      preLoaderRoute: typeof ApiPublicAltegioWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat2desk-webhook': {
       id: '/api/public/chat2desk-webhook'
       path: '/api/public/chat2desk-webhook'
       fullPath: '/api/public/chat2desk-webhook'
       preLoaderRoute: typeof ApiPublicChat2deskWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/jobs/altegio-reconcile': {
+      id: '/api/public/jobs/altegio-reconcile'
+      path: '/api/public/jobs/altegio-reconcile'
+      fullPath: '/api/public/jobs/altegio-reconcile'
+      preLoaderRoute: typeof ApiPublicJobsAltegioReconcileRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -439,7 +480,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicAltegioWebhookRoute: ApiPublicAltegioWebhookRoute,
   ApiPublicChat2deskWebhookRoute: ApiPublicChat2deskWebhookRoute,
+  ApiPublicJobsAltegioReconcileRoute: ApiPublicJobsAltegioReconcileRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
