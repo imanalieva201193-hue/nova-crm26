@@ -1,0 +1,52 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Download, ArrowRight, CalendarDays } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useCrm } from "@/components/crm/context";
+import { altegioDataQ } from "@/components/crm/altegio-data";
+import { AltegioSettings } from "@/components/crm/AltegioSettings";
+import { exportWorkbook } from "@/components/crm/workspace-export";
+import { altegioFunnel } from "@/lib/altegio";
+import { BRANCHES } from "@/lib/crm";
+
+export const Route = createFileRoute("/_authenticated/altegio")({
+  head: () => ({ meta: [{ title: "Altegio — записи и воронка | Nova CRM" }, { name: "description", content: "Записи Altegio, визиты пациентов, операции и результаты по филиалам Nova Clinic." }, { property: "og:title", content: "Altegio — записи и воронка | Nova CRM" }, { property: "og:description", content: "Единый отчёт по пациентам, консультациям и операциям из Altegio." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
+  loader: ({ context }) => context.queryClient.ensureQueryData(altegioDataQ),
+  component: AltegioPage,
+});
+
+function AltegioPage() {
+  const { data } = useSuspenseQuery(altegioDataQ);
+  const { isAdmin, me, branch, openLead } = useCrm();
+  const [tab, setTab] = useState("report");
+  const today = new Date(Date.now() + 6 * 3600e3).toISOString().slice(0, 10);
+  const [filter, setFilter] = useState({ from: today.slice(0, 8) + "01", to: today, direction: "", doctor: "", employee: "", source: "" });
+  const [drill, setDrill] = useState<{ label: string; patients: string[] } | null>(null);
+  const [search, setSearch] = useState("");
+  if (!isAdmin) return <p className="text-muted-foreground">Отчёт Altegio доступен коммерческому директору и РОП.</p>;
+  const report = altegioFunnel(data.records, { ...filter, branch: branch === "all" ? "" : branch });
+  const selected = data.rows.filter(r => (!drill || drill.patients.includes(r.phone_key ?? "")) && (branch === "all" || r.branch_code === branch) && (!filter.direction || r.direction === filter.direction) && `${r.client_name ?? ""} ${r.phone ?? ""} ${r.record_id}`.toLowerCase().includes(search.toLowerCase()));
+  const branchName = (code: string | null) => BRANCHES.find(b => b.code === code)?.short ?? code ?? "Не привязан";
+  const date = (v: string | null) => v ? new Date(v).toLocaleString("ru-RU", { timeZone: "Asia/Bishkek" }) : "—";
+  const status = (r: typeof data.rows[number]) => r.deleted ? "Отменена" : r.attendance === 1 ? "Пришёл" : r.attendance === -1 ? "Не пришёл" : r.confirmed || r.attendance === 2 ? "Подтвердил" : "Записан";
+  const sel = "h-10 min-w-0 rounded-md border border-input bg-card px-3 text-sm";
+  function exportData() { exportWorkbook("Altegio", { "Показатели": report.metrics.map(m => ({ "Показатель": m.label, "Пациентов": m.value, "Сумма": m.money ?? "" })), "Сотрудники": report.byEmployee.map(e => ({ "Сотрудник": e.label, "Записали": e.value })), "Перетоки": report.flows.map(e => ({ "Направление": e.label, "Пациентов": e.value })), "Записи": selected.map(r => ({ "ID": r.record_id, "Пациент": r.client_name, "Телефон": r.phone, "Филиал": branchName(r.branch_code), "Врач": r.staff_name, "Создана": date(r.created_at_altegio), "Визит": date(r.visit_at), "Статус": status(r), "Сумма": r.amount })) }); }
+  const groups = [{ title: "Кто записал", rows: report.byEmployee }, { title: "Кто куда ушёл", rows: report.flows }];
+  return <div className="space-y-7">
+    <header className="flex flex-wrap items-end justify-between gap-4"><div><div className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">Записи и визиты</div><h1 className="font-display text-3xl font-bold md:text-4xl">Altegio</h1></div><Button variant="outline" onClick={exportData}><Download className="size-4" />Excel</Button></header>
+    <div className="flex w-fit max-w-full flex-wrap gap-1 rounded-md bg-muted p-1">{[{ key: "report", title: "Воронка" }, { key: "patients", title: "Записи" }, ...(me.role === "commercial_director" ? [{ key: "settings", title: "Подключение" }] : [])].map(t => <Button key={t.key} variant={tab === t.key ? "secondary" : "ghost"} onClick={() => { setTab(t.key); setDrill(null); }}>{t.title}</Button>)}</div>
+    {!data.rows.length && tab !== "settings" && <section className="space-y-3 border-y py-6"><div className="flex items-center gap-3"><CalendarDays className="size-6 text-primary" /><h2 className="text-lg font-semibold">Записей Altegio пока нет</h2></div><p className="text-sm text-muted-foreground">Подключение и загрузка истории ещё не завершены.</p>{me.role === "commercial_director" && <Button onClick={() => setTab("settings")}>Подключить Altegio<ArrowRight className="size-4" /></Button>}</section>}
+    {tab === "settings" ? <AltegioSettings data={data} /> : <>
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6"><label className="space-y-1 text-xs text-muted-foreground">С даты<Input aria-label="С даты" type="date" value={filter.from} onChange={e => { setFilter({ ...filter, from: e.target.value }); setDrill(null); }} /></label><label className="space-y-1 text-xs text-muted-foreground">По дату<Input aria-label="По дату" type="date" value={filter.to} onChange={e => { setFilter({ ...filter, to: e.target.value }); setDrill(null); }} /></label>{([ ["direction", "Направление", ["Общий профиль", "Хирургия"]], ["doctor", "Врач", [...new Set(data.records.map(r => r.staff))]], ["employee", "Сотрудник", [...new Set(data.records.map(r => r.employee))]], ["source", "Источник", ["Altegio"]] ] as const).map(([key, title, options]) => <label key={key} className="grid gap-1 text-xs text-muted-foreground">{title}<select aria-label={title} className={sel} value={filter[key]} onChange={e => { setFilter({ ...filter, [key]: e.target.value }); setDrill(null); }}><option value="">Все</option>{options.map(v => <option key={v} value={v}>{v}</option>)}</select></label>)}</section>
+      {filter.from > filter.to && <p role="alert" className="text-sm text-destructive">Начало периода должно быть раньше окончания.</p>}
+      {tab === "report" && <><section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{report.metrics.map(m => <Button key={m.key} variant="outline" className="h-auto min-h-32 flex-col items-start justify-between whitespace-normal rounded-lg bg-card p-5 text-left" onClick={() => { setDrill(m); setTab("patients"); }}><span className="text-sm text-muted-foreground">{m.label}</span><span className="font-display text-3xl font-bold">{m.value.toLocaleString("ru-RU")}</span>{m.money !== undefined && <span className="text-sm text-primary">{m.money.toLocaleString("ru-RU")} сом</span>}</Button>)}</section>
+        <section className="grid gap-6 border-y py-5 sm:grid-cols-2"><div><div className="text-sm text-muted-foreground">Запись → приход</div><div className="font-display text-2xl font-bold">{report.conversions.bookedToCame}%</div></div><div><div className="text-sm text-muted-foreground">Приход → операция</div><div className="font-display text-2xl font-bold">{report.conversions.cameToOperation}%</div></div></section>
+        <section className="grid gap-8 lg:grid-cols-2">{groups.map(group => <div key={group.title} className="space-y-3"><h2 className="font-display text-lg font-bold">{group.title}</h2>{group.rows.length ? group.rows.map(g => <Button key={g.label} variant="ghost" className="h-auto w-full justify-between gap-4 whitespace-normal border-b py-3 text-left" onClick={() => { setDrill(g); setTab("patients"); }}><span>{g.label}</span><span className="font-bold">{g.value}</span></Button>) : <p className="text-sm text-muted-foreground">Нет данных за выбранный период</p>}</div>)}</section>
+        <section className="space-y-3 border-t pt-5"><h2 className="font-display text-lg font-bold">Результат загрузки</h2><div className="grid gap-3 text-sm sm:grid-cols-2">{data.locations.map(l => <div key={l.location_id}>{l.title || branchName(l.branch_code)}: <strong>{data.rows.filter(r => r.location_id === l.location_id).length}</strong> записей</div>)}<div>Совпали с CRM по телефону: <strong>{new Set(data.rows.filter(r => r.matched_existing).map(r => r.phone_key).filter(Boolean)).size}</strong> пациентов</div><div>Не сопоставлены: <strong>{data.staff.filter(s => !s.doctor_id).length}</strong> врачей, <strong>{data.users.filter(u => !u.employee_email).length}</strong> сотрудников</div></div></section></>}
+      {tab === "patients" && <section className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-display text-lg font-bold">{drill?.label ?? "Записи пациентов"} · {selected.length}</h2>{drill && <Button variant="ghost" onClick={() => setDrill(null)}>Все записи</Button>}</div><Input aria-label="Поиск пациента" placeholder="Имя, телефон или ID записи" value={search} onChange={e => setSearch(e.target.value)} /><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b text-muted-foreground"><tr>{["Пациент", "Филиал", "Врач", "Визит", "Статус", "Сумма"].map(v => <th key={v} className="px-3 py-3 font-medium">{v}</th>)}</tr></thead><tbody>{selected.map(r => <tr key={r.record_id} className="border-b"><td className="px-3 py-3">{r.lead_id ? <Button variant="link" className="h-auto justify-start whitespace-normal p-0 text-left" onClick={() => r.lead_id && openLead(r.lead_id)}>{r.client_name || "Без имени"}</Button> : r.client_name || "Без имени"}<div className="text-xs text-muted-foreground">{r.phone || "Без телефона"} · #{r.record_id}</div></td><td className="px-3 py-3">{branchName(r.branch_code)}</td><td className="px-3 py-3">{r.staff_name || "—"}</td><td className="whitespace-nowrap px-3 py-3">{date(r.visit_at)}</td><td className="px-3 py-3">{status(r)}</td><td className="whitespace-nowrap px-3 py-3">{r.amount.toLocaleString("ru-RU")} сом</td></tr>)}</tbody></table></div>{!selected.length && <p className="py-5 text-center text-muted-foreground">Записей не найдено</p>}</section>}
+    </>}
+    <Link to="/settings" className="inline-block text-sm text-primary">Настройки Nova CRM →</Link>
+  </div>;
+}

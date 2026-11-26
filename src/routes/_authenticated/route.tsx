@@ -208,6 +208,7 @@ function Shell() {
                 {labels["control"]}
               </Link>
             )}
+            {isAdmin && <Link to="/altegio" onClick={() => setMenuOpen(false)} className="flex shrink-0 items-center gap-3 rounded-md px-3 py-2.5 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent/60" activeProps={{ className: "bg-sidebar-accent text-sidebar-primary font-semibold" }}><BarChart3 className="size-4" />Altegio</Link>}
             {NAV.map((n) => (
               <Link
                 key={n.to}

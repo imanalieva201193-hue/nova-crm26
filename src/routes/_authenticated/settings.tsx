@@ -4,6 +4,7 @@ import { BRANCHES, FUNNELS, ROLES, stageList, type FunnelCode } from "@/lib/crm"
 import { SectionNames } from "@/components/crm/SectionNames";
 import { useLabels } from "@/components/crm/labels";
 import { Chat2deskIntegration } from "@/components/crm/Chat2deskIntegration";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -33,6 +34,7 @@ function SettingsPage() {
       </div>
       {isAdmin && <SectionNames />}
       {isAdmin && <Chat2deskIntegration />}
+      {isAdmin && <section className="space-y-3 border-b pb-6"><h2 className="font-display text-xl font-bold">Altegio</h2><Button variant="outline" asChild><Link to="/altegio">Записи, отчёты и подключение →</Link></Button></section>}
       <section className="space-y-2 border-b pb-6">
         <h2 className="font-display text-xl font-bold">Профиль</h2>
         <div className="text-sm">

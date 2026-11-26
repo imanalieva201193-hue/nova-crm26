@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminsRouteImport } from './routes/_authenticated/admins'
+import { Route as AuthenticatedAltegioRouteImport } from './routes/_authenticated/altegio'
 import { Route as AuthenticatedChat2deskRouteImport } from './routes/_authenticated/chat2desk'
 import { Route as AuthenticatedCheckupRouteImport } from './routes/_authenticated/checkup'
 import { Route as AuthenticatedControlRouteImport } from './routes/_authenticated/control'
@@ -53,6 +54,11 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
 const AuthenticatedAdminsRoute = AuthenticatedAdminsRouteImport.update({
   id: '/admins',
   path: '/admins',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAltegioRoute = AuthenticatedAltegioRouteImport.update({
+  id: '/altegio',
+  path: '/altegio',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedChat2deskRoute = AuthenticatedChat2deskRouteImport.update({
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admins': typeof AuthenticatedAdminsRoute
+  '/altegio': typeof AuthenticatedAltegioRoute
   '/chat2desk': typeof AuthenticatedChat2deskRoute
   '/checkup': typeof AuthenticatedCheckupRoute
   '/control': typeof AuthenticatedControlRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/admins': typeof AuthenticatedAdminsRoute
+  '/altegio': typeof AuthenticatedAltegioRoute
   '/chat2desk': typeof AuthenticatedChat2deskRoute
   '/checkup': typeof AuthenticatedCheckupRoute
   '/control': typeof AuthenticatedControlRoute
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/admins': typeof AuthenticatedAdminsRoute
+  '/_authenticated/altegio': typeof AuthenticatedAltegioRoute
   '/_authenticated/chat2desk': typeof AuthenticatedChat2deskRoute
   '/_authenticated/checkup': typeof AuthenticatedCheckupRoute
   '/_authenticated/control': typeof AuthenticatedControlRoute
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin'
     | '/admins'
+    | '/altegio'
     | '/chat2desk'
     | '/checkup'
     | '/control'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin'
     | '/admins'
+    | '/altegio'
     | '/chat2desk'
     | '/checkup'
     | '/control'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/admin'
     | '/_authenticated/admins'
+    | '/_authenticated/altegio'
     | '/_authenticated/chat2desk'
     | '/_authenticated/checkup'
     | '/_authenticated/control'
@@ -320,6 +332,13 @@ declare module '@tanstack/react-router' {
       path: '/admins'
       fullPath: '/admins'
       preLoaderRoute: typeof AuthenticatedAdminsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/altegio': {
+      id: '/_authenticated/altegio'
+      path: '/altegio'
+      fullPath: '/altegio'
+      preLoaderRoute: typeof AuthenticatedAltegioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/chat2desk': {
@@ -440,6 +459,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAdminsRoute: typeof AuthenticatedAdminsRoute
+  AuthenticatedAltegioRoute: typeof AuthenticatedAltegioRoute
   AuthenticatedChat2deskRoute: typeof AuthenticatedChat2deskRoute
   AuthenticatedCheckupRoute: typeof AuthenticatedCheckupRoute
   AuthenticatedControlRoute: typeof AuthenticatedControlRoute
@@ -458,6 +478,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAdminsRoute: AuthenticatedAdminsRoute,
+  AuthenticatedAltegioRoute: AuthenticatedAltegioRoute,
   AuthenticatedChat2deskRoute: AuthenticatedChat2deskRoute,
   AuthenticatedCheckupRoute: AuthenticatedCheckupRoute,
   AuthenticatedControlRoute: AuthenticatedControlRoute,
