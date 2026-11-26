@@ -29,7 +29,8 @@ export async function runJobChunk(db: Db, id: string, api = altegioApi()) {
   try {
     let pages = 0;
     while (job.loc_index < job.location_ids.length && Date.now() < deadline && pages < 15) {
-      const loc = job.location_ids[job.loc_index]!;
+      const loc = job.location_ids[job.loc_index];
+      if (loc === undefined) throw new Error("Филиал задания не найден.");
       const rows = await api.records(loc, { page: String(job.page), start_date: job.from_date, end_date: until });
       pages += 1; job.api_calls += 1;
       job.imported += await applyRows(db, rows);
